@@ -99,10 +99,29 @@ function CreatedView({
     }
   };
 
+  const copyAll = async () => {
+    const text = players.map((p) => `${p}: ${linkOf(p)}`).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${players.length}개 링크 복사됨`);
+    } catch {
+      toast.error("복사 실패");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
       <div className="w-full max-w-xl bg-white rounded-lg shadow p-6 flex flex-col gap-4">
-        <h1 className="text-xl font-bold">방이 생성되었습니다</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">방이 생성되었습니다</h1>
+          <button
+            type="button"
+            onClick={copyAll}
+            className="px-3 py-1.5 text-xs rounded bg-slate-800 text-white hover:bg-slate-700"
+          >
+            전체 링크 복사
+          </button>
+        </div>
         <div className="text-sm text-slate-600">
           방 ID: <span className="font-mono">{gameId}</span>
         </div>
