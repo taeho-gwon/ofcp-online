@@ -66,7 +66,7 @@ export function Hand({
           />
         </div>
       )}
-      <div className="flex items-center gap-2 justify-center min-h-20">
+      <div className="flex items-center gap-2 justify-center min-h-24">
         {hand.length === 0 && (
           <span className="text-slate-400 text-sm">손패 없음</span>
         )}

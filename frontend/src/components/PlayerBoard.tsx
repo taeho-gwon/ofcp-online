@@ -92,7 +92,7 @@ export function PlayerBoard({
   const centerOverlay = animOverlay?.position === "center" ? animOverlay : null;
 
   return (
-    <div className={`relative rounded-lg ${ring} ${me} p-3 flex flex-col gap-2`}>
+    <div className={`relative rounded-lg ${ring} ${me} p-4 flex flex-col gap-3`}>
       <div className="flex items-center justify-between text-sm">
         <span className="flex items-center gap-1.5 font-semibold truncate">
           {isDealer && (

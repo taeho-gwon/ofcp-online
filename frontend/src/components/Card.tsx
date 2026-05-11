@@ -19,7 +19,7 @@ export function CardView({
   const red = SUIT_IS_RED[card.suit];
   const clickable = !!onClick;
 
-  const dim = size === "sm" ? "w-9 h-12 text-base" : "w-12 h-16 text-xl";
+  const dim = size === "sm" ? "w-11 h-14 text-lg" : "w-16 h-20 text-2xl";
   const ring = selected ? "ring-2 ring-amber-400" : "";
   const fade = faded ? "opacity-30" : "";
   const cursor = clickable ? "cursor-pointer hover:-translate-y-1" : "";
@@ -45,7 +45,7 @@ interface SlotProps {
 }
 
 export function EmptySlot({ onClick, size = "md", highlighted = false }: SlotProps) {
-  const dim = size === "sm" ? "w-9 h-12" : "w-12 h-16";
+  const dim = size === "sm" ? "w-11 h-14" : "w-16 h-20";
   const clickable = !!onClick;
   const cursor = clickable
     ? "cursor-pointer hover:bg-amber-100"
@@ -64,7 +64,7 @@ export function EmptySlot({ onClick, size = "md", highlighted = false }: SlotPro
 }
 
 export function CardBack({ size = "sm" }: { size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "w-9 h-12" : "w-12 h-16";
+  const dim = size === "sm" ? "w-11 h-14" : "w-16 h-20";
   return (
     <div
       className={`${dim} bg-gradient-to-br from-indigo-500 to-indigo-700 border border-indigo-800 rounded-md shadow-sm`}
