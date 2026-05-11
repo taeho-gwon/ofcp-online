@@ -1,6 +1,12 @@
 import type { Card, PlayerState, Row } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
-import { CardView, EmptySlot } from "./Card";
+import { CardBack, CardView, EmptySlot } from "./Card";
+
+const COUNT_KEY: Record<Row, "top_count" | "middle_count" | "bottom_count"> = {
+  top: "top_count",
+  middle: "middle_count",
+  bottom: "bottom_count",
+};
 
 interface PendingCard {
   card: Card;
@@ -134,10 +140,12 @@ export function PlayerBoard({
       <div className={`relative flex flex-col gap-2 ${isFoul ? "opacity-50" : ""}`}>
         {ROWS.map((row) => {
           const placed = player.board[row];
+          const placedCount = player.board[COUNT_KEY[row]];
+          // 백엔드 마스킹 시 placed=[]이지만 placedCount는 실제 보드 카드 수 → 부족분을 뒷면 카드로 표시.
+          const hidden = Math.max(0, placedCount - placed.length);
           const pending = pendingByRow?.[row] ?? [];
           const cap = ROW_CAPACITY[row];
-          const used = placed.length + pending.length;
-          const empty = cap - used;
+          const empty = Math.max(0, cap - placedCount - pending.length);
           const isSelected = isMe && selectedRow === row;
           const rowClickable = isMe && !!onRowSelect;
           const rowRing = isSelected
@@ -153,6 +161,9 @@ export function PlayerBoard({
             >
               {placed.map((c, i) => (
                 <CardView key={`p-${i}`} card={c} size={size} />
+              ))}
+              {Array.from({ length: hidden }).map((_, i) => (
+                <CardBack key={`h-${i}`} size={size} />
               ))}
               {pending.map((p) => (
                 <CardView

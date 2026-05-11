@@ -17,6 +17,10 @@ from app.game.state import GameState, Phase
 
 Row = Literal["top", "middle", "bottom"]
 
+# FL 플레이어 보드가 다른 viewer에게 가려져야 하는 페이즈.
+# SCORING 진입 시 일괄 공개 (DONE/GAME_OVER 포함).
+_FL_BOARD_HIDDEN_PHASES = (Phase.FANTASY_TURN, Phase.FIRST_TURN, Phase.NORMAL_TURN)
+
 
 class CardSchema(BaseModel):
     rank: int = Field(ge=2, le=14)
@@ -57,6 +61,9 @@ class BoardResponse(BaseModel):
     top: list[CardSchema]
     middle: list[CardSchema]
     bottom: list[CardSchema]
+    top_count: int
+    middle_count: int
+    bottom_count: int
 
 
 class HandEvaluationSchema(BaseModel):
@@ -197,13 +204,25 @@ def serialize_state(
         is_viewer = viewer_id is None or p.player_id == viewer_id
         evaluation = _board_evaluation(p.board, rules) if show_result else None
         last_delta = deltas.get(p.player_id) if show_result else None
+        hide_fl_board = (
+            not is_viewer and p.is_fantasy and state.phase in _FL_BOARD_HIDDEN_PHASES
+        )
         players.append(
             PlayerStateResponse(
                 player_id=p.player_id,
                 board=BoardResponse(
-                    top=[CardSchema.from_card(c) for c in p.board.top],
-                    middle=[CardSchema.from_card(c) for c in p.board.middle],
-                    bottom=[CardSchema.from_card(c) for c in p.board.bottom],
+                    top=[]
+                    if hide_fl_board
+                    else [CardSchema.from_card(c) for c in p.board.top],
+                    middle=[]
+                    if hide_fl_board
+                    else [CardSchema.from_card(c) for c in p.board.middle],
+                    bottom=[]
+                    if hide_fl_board
+                    else [CardSchema.from_card(c) for c in p.board.bottom],
+                    top_count=len(p.board.top),
+                    middle_count=len(p.board.middle),
+                    bottom_count=len(p.board.bottom),
                 ),
                 hand=[CardSchema.from_card(c) for c in p.hand] if is_viewer else [],
                 hand_count=len(p.hand),

@@ -21,6 +21,9 @@ export interface Board {
   top: Card[];
   middle: Card[];
   bottom: Card[];
+  top_count: number;
+  middle_count: number;
+  bottom_count: number;
 }
 
 export interface HandEvaluation {
