@@ -290,12 +290,10 @@ export function ResultModal({
           // 관전자처럼 내 매치업이 없으면 전체를 a 기준으로 보여준다.
           const rows = myMatchups.length > 0 ? myMatchups : matchups;
           const perspective = myMatchups.length > 0 ? myPlayerId : undefined;
-          const heading =
-            myMatchups.length > 0 ? "매치업 분해 (나 기준)" : "매치업 분해 (a 기준)";
           return (
             <div className="mt-5">
               <div className="text-sm font-semibold text-slate-700 mb-1">
-                {heading}
+                상세 결과
               </div>
               <div className="rounded-md border border-slate-200 px-3">
                 {rows.map((m, i) => (
