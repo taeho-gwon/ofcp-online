@@ -80,9 +80,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   commitPlacement: (handIdx, row) => {
     const { placed } = get();
     if (placed.some((p) => p.handIdx === handIdx)) return;
+    // 방금 카드를 받은 줄을 활성 줄로 고정한다. 슬롯 우선 흐름에서는 동일 값
+    // 재설정(no-op)이고, 카드 우선 흐름에서는 그 줄이 자동으로 다음 배치 대상이 된다.
     set({
       placed: [...placed, { handIdx, row }],
-      selectedRow: null,
+      selectedRow: row,
       selectedCardIdx: null,
     });
   },
