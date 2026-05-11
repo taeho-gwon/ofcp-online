@@ -122,24 +122,42 @@ function PlayerCard({
   );
 }
 
-function MatchupRow({ m }: { m: Matchup }) {
-  const topTotal = m.top_line_a + (m.top_royalty_a - m.top_royalty_b);
-  const middleTotal = m.middle_line_a + (m.middle_royalty_a - m.middle_royalty_b);
-  const bottomTotal = m.bottom_line_a + (m.bottom_royalty_a - m.bottom_royalty_b);
+function MatchupRow({
+  m,
+  perspectiveId,
+}: {
+  m: Matchup;
+  perspectiveId?: string;
+}) {
+  // perspectiveId가 b쪽이면 부호를 뒤집어 표시한다. 미지정 또는 a면 그대로.
+  const flip = perspectiveId === m.b_id ? -1 : 1;
+  const meId = flip === -1 ? m.b_id : m.a_id;
+  const oppId = flip === -1 ? m.a_id : m.b_id;
+  const meLabel = perspectiveId && meId === perspectiveId ? "나" : meId;
+
+  const topTotal =
+    flip * (m.top_line_a + (m.top_royalty_a - m.top_royalty_b));
+  const middleTotal =
+    flip * (m.middle_line_a + (m.middle_royalty_a - m.middle_royalty_b));
+  const bottomTotal =
+    flip * (m.bottom_line_a + (m.bottom_royalty_a - m.bottom_royalty_b));
 
   const cells: { label: string; value: number }[] = [
     { label: "탑", value: topTotal },
     { label: "미들", value: middleTotal },
     { label: "바텀", value: bottomTotal },
   ];
-  if (m.scoop_a !== 0) cells.push({ label: "스쿱", value: m.scoop_a });
+  const scoop = flip * m.scoop_a;
+  if (scoop !== 0) cells.push({ label: "스쿱", value: scoop });
+
+  const total = flip * m.total_a;
 
   return (
     <div className="flex items-center justify-between gap-2 py-1.5 text-sm border-t border-slate-200">
       <div className="font-medium min-w-0 truncate">
-        <span className="truncate">{m.a_id}</span>
+        <span className="truncate">{meLabel}</span>
         <span className="text-slate-400 mx-1">vs</span>
-        <span className="truncate">{m.b_id}</span>
+        <span className="truncate">{oppId}</span>
       </div>
       <div className="flex items-center gap-3 text-xs">
         {cells.map((c) => (
@@ -152,7 +170,7 @@ function MatchupRow({ m }: { m: Matchup }) {
         ))}
         <span className="ml-2 font-mono font-semibold">
           <span className="text-slate-500 mr-1">합계</span>
-          <span className={toneClass(m.total_a)}>{fmt(m.total_a)}</span>
+          <span className={toneClass(total)}>{fmt(total)}</span>
         </span>
       </div>
     </div>
@@ -261,18 +279,28 @@ export function ResultModal({
           ))}
         </div>
 
-        {matchups.length > 0 && (
-          <div className="mt-5">
-            <div className="text-sm font-semibold text-slate-700 mb-1">
-              매치업 분해 (a 기준)
+        {matchups.length > 0 && (() => {
+          const myMatchups = matchups.filter(
+            (m) => m.a_id === myPlayerId || m.b_id === myPlayerId,
+          );
+          // 관전자처럼 내 매치업이 없으면 전체를 a 기준으로 보여준다.
+          const rows = myMatchups.length > 0 ? myMatchups : matchups;
+          const perspective = myMatchups.length > 0 ? myPlayerId : undefined;
+          const heading =
+            myMatchups.length > 0 ? "매치업 분해 (나 기준)" : "매치업 분해 (a 기준)";
+          return (
+            <div className="mt-5">
+              <div className="text-sm font-semibold text-slate-700 mb-1">
+                {heading}
+              </div>
+              <div className="rounded-md border border-slate-200 px-3">
+                {rows.map((m, i) => (
+                  <MatchupRow key={i} m={m} perspectiveId={perspective} />
+                ))}
+              </div>
             </div>
-            <div className="rounded-md border border-slate-200 px-3">
-              {matchups.map((m, i) => (
-                <MatchupRow key={i} m={m} />
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {isGameOver && (
           <FinalStandings players={players} myPlayerId={myPlayerId} />
