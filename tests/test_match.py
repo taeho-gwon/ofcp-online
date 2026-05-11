@@ -35,6 +35,14 @@ def valid_board_trips_top_quads_bottom() -> tuple[list[Card], list[Card], list[C
     return top, middle, bottom
 
 
+def valid_board_no_fl() -> tuple[list[Card], list[Card], list[Card]]:
+    """high card / pair 5 / pair 9 — FL 미진입, foul 아님."""
+    top = [card(2, 1), card(3, 1), card(4, 2)]
+    middle = [card(5, 1), card(5, 2), card(6, 1), card(7, 1), card(8, 1)]
+    bottom = [card(9, 1), card(9, 2), card(10, 1), card(11, 1), card(12, 1)]
+    return top, middle, bottom
+
+
 def attach_board(player: PlayerState, top, middle, bottom) -> None:
     player.board = PlayerBoard()
     player.board.top = list(top)
@@ -77,30 +85,71 @@ class TestEliminationEndsMatch:
 
 
 class TestMaxRoundsEndsMatch:
-    def test_last_normal_round_finalize_goes_to_game_over(self):
+    def test_last_normal_round_no_fl_qualifier_goes_to_game_over(self):
         rules = replace(PINEAPPLE_OFC, max_rounds=3)
         state = create_game("g", ["p0", "p1"], rules=rules)
         state.round_number = rules.max_rounds  # 마지막 일반 라운드 시뮬레이션
         state.is_bonus_round = False
         for p in state.players:
-            attach_board(p, *valid_board_qq_top())
+            attach_board(p, *valid_board_no_fl())
 
         _finalize(state, rules)
 
         assert state.phase == Phase.GAME_OVER
 
-    def test_bonus_round_at_max_does_not_end(self):
-        """보너스 라운드는 max_rounds 도달 판정에서 제외된다.
+    def test_last_normal_round_with_fl_qualifier_defers_to_bonus(self):
+        """마지막 일반 라운드라도 FL 자격자가 있으면 보너스 라운드까지 진행한다."""
+        rules = replace(PINEAPPLE_OFC, max_rounds=3)
+        state = create_game("g", ["p0", "p1"], rules=rules)
+        state.round_number = rules.max_rounds
+        state.is_bonus_round = False
+        for p in state.players:
+            attach_board(p, *valid_board_qq_top())  # QQ → FL 14장 자격
 
-        1단계 규칙상 12R(일반) 완료 시점에 이미 GAME_OVER이므로, max_rounds 이전 일반
-        라운드 후 보너스 라운드가 채점돼도 GAME_OVER가 되지 않음을 확인한다.
-        """
+        _finalize(state, rules)
+
+        assert state.phase == Phase.DONE
+        assert all(p.next_fantasy_cards == 14 for p in state.players)
+
+    def test_bonus_round_with_reentry_continues(self):
+        """보너스 라운드에서 FL 재진입 자격자가 있으면 또 진행한다."""
+        rules = replace(PINEAPPLE_OFC, max_rounds=3)
+        state = create_game("g", ["p0", "p1"], rules=rules)
+        state.round_number = rules.max_rounds
+        state.is_bonus_round = True
+        for p in state.players:
+            p.is_fantasy = True
+            attach_board(p, *valid_board_trips_top_quads_bottom())  # 재진입 자격
+
+        _finalize(state, rules)
+
+        assert state.phase == Phase.DONE
+        assert all(
+            p.next_fantasy_cards == rules.fantasy_reentry_cards for p in state.players
+        )
+
+    def test_bonus_round_without_reentry_at_max_ends(self):
+        """보너스 라운드 종료 후 재진입 자격자가 없고 max_rounds 도달이면 종료."""
+        rules = replace(PINEAPPLE_OFC, max_rounds=3)
+        state = create_game("g", ["p0", "p1"], rules=rules)
+        state.round_number = rules.max_rounds
+        state.is_bonus_round = True
+        for p in state.players:
+            p.is_fantasy = True
+            attach_board(p, *valid_board_no_fl())  # 재진입 자격 미달
+
+        _finalize(state, rules)
+
+        assert state.phase == Phase.GAME_OVER
+
+    def test_bonus_round_before_max_does_not_end(self):
+        """max_rounds 이전 보너스 라운드는 종료되지 않는다(자격 여부 무관)."""
         rules = replace(PINEAPPLE_OFC, max_rounds=3)
         state = create_game("g", ["p0", "p1"], rules=rules)
         state.round_number = 1
         state.is_bonus_round = True
         for p in state.players:
-            attach_board(p, *valid_board_qq_top())
+            attach_board(p, *valid_board_no_fl())
 
         _finalize(state, rules)
 

@@ -264,10 +264,11 @@ def _finalize(state: GameState, rules: Ruleset) -> GameState:
             player.next_fantasy_cards = _fantasy_entry_cards(player.board, rules)
 
     eliminated = any(p.score <= rules.eliminate_at for p in state.players)
-    last_normal_round = (
-        state.round_number >= rules.max_rounds and not state.is_bonus_round
-    )
-    state.phase = Phase.GAME_OVER if (eliminated or last_normal_round) else Phase.DONE
+    fl_carryover = any(p.next_fantasy_cards is not None for p in state.players)
+    # 일반 라운드 한도 도달 후라도 FL 자격자가 있으면 보너스 라운드까지 마저 진행한다.
+    reached_max = state.round_number >= rules.max_rounds
+    match_over = eliminated or (reached_max and not fl_carryover)
+    state.phase = Phase.GAME_OVER if match_over else Phase.DONE
     return state
 
 
