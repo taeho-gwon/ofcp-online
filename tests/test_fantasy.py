@@ -140,7 +140,7 @@ class TestFantasyTurnFlow:
             "bottom": hand[8:13],
         }
         discards = hand[13:]
-        state = place_fantasy_turn(state, placements, discards)
+        state = place_fantasy_turn(state, "p1", placements, discards)
 
         # FL 완료 → FIRST_TURN으로 전환, 일반 플레이어 시작
         assert state.phase == Phase.FIRST_TURN
@@ -174,6 +174,7 @@ class TestFantasyTurnFlow:
 
         state = place_fantasy_turn(
             state,
+            "p1",
             {"top": fixed[:3], "middle": fixed[3:8], "bottom": fixed[8:13]},
             [fixed[13]],
         )
@@ -205,3 +206,65 @@ class TestFantasyTurnFlow:
         state = create_game("g1", ["p0", "p1"], dealer_idx=0)
         assert state.phase == Phase.FIRST_TURN
         assert not any(p.is_fantasy for p in state.players)
+
+
+class TestFantasySimultaneousPlacement:
+    """FL 플레이어 간 순서에 상관없이 동시 진행이 가능해야 한다."""
+
+    def _full_fl_placements(
+        self, hand: list[Card]
+    ) -> tuple[dict[str, list[Card]], list[Card]]:
+        return (
+            {"top": hand[:3], "middle": hand[3:8], "bottom": hand[8:13]},
+            list(hand[13:]),
+        )
+
+    def test_later_player_can_place_first(self):
+        state = create_game(
+            "g1",
+            ["p0", "p1", "p2"],
+            dealer_idx=0,
+            fantasy_players={"p1": 14, "p2": 14},
+        )
+        # 기본 순회상 dealer+1=p1이 먼저지만 p2가 먼저 둬도 허용되어야 한다.
+        p2 = next(p for p in state.players if p.player_id == "p2")
+        placements, discards = self._full_fl_placements(p2.hand)
+        state = place_fantasy_turn(state, "p2", placements, discards)
+
+        # 아직 p1 미완 → FANTASY_TURN 유지
+        assert state.phase == Phase.FANTASY_TURN
+        assert p2.board.is_complete
+        # current_player_idx는 표시용으로 미완 FL을 가리킨다
+        assert state.players[state.current_player_idx].player_id == "p1"
+
+    def test_completed_player_cannot_place_again(self):
+        state = create_game(
+            "g1",
+            ["p0", "p1"],
+            dealer_idx=0,
+            fantasy_players={"p0": 14, "p1": 14},
+        )
+        p1 = next(p for p in state.players if p.player_id == "p1")
+        placements, discards = self._full_fl_placements(p1.hand)
+        state = place_fantasy_turn(state, "p1", placements, discards)
+
+        # p1은 이미 완료 → 다시 두려 하면 거부
+        import pytest
+
+        with pytest.raises(ValueError):
+            place_fantasy_turn(state, "p1", placements, discards)
+
+    def test_non_fl_player_cannot_place_fantasy(self):
+        state = create_game(
+            "g1",
+            ["p0", "p1"],
+            dealer_idx=0,
+            fantasy_players={"p1": 14},
+        )
+        p1 = next(p for p in state.players if p.player_id == "p1")
+        placements, discards = self._full_fl_placements(p1.hand)
+
+        import pytest
+
+        with pytest.raises(ValueError):
+            place_fantasy_turn(state, "p0", placements, discards)

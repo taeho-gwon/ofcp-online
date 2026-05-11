@@ -94,15 +94,19 @@ def start_next_round(state: GameState, rules: Ruleset = PINEAPPLE_OFC) -> GameSt
 
 def place_fantasy_turn(
     state: GameState,
+    player_id: str,
     placements: dict[str, list[Card]],
     discards: list[Card],
     rules: Ruleset = PINEAPPLE_OFC,
 ) -> GameState:
-    """FL 턴: N장 중 13장 배치, 나머지 버림."""
+    """FL 턴: N장 중 13장 배치, 나머지 버림. FL 플레이어 간 동시 진행."""
     if state.phase != Phase.FANTASY_TURN:
         raise ValueError("Not in fantasy turn phase")
 
-    player = state.current_player
+    player = next((p for p in state.players if p.player_id == player_id), None)
+    if player is None or not player.is_fantasy or player.board.is_complete:
+        raise ValueError(f"Player {player_id} is not an eligible FL player")
+
     placed = [c for cards in placements.values() for c in cards]
 
     if len(placed) != rules.fantasy_board_size:
@@ -185,17 +189,16 @@ def _first_incomplete_fantasy_idx(state: GameState) -> int:
 
 
 def _advance_fantasy(state: GameState, rules: Ruleset) -> GameState:
-    """FL 플레이어 배치 완료 후 다음 FL 플레이어로, 없으면 FIRST_TURN으로 전환."""
-    probe = state.next_player_idx()
-    for _ in range(state.player_count - 1):
-        p = state.players[probe]
+    """FL 동시 진행: 미완 FL이 남아있으면 유지, 모두 완료되면 FIRST_TURN으로 전환."""
+    start = (state.dealer_idx + 1) % state.player_count
+    for i in range(state.player_count):
+        idx = (start + i) % state.player_count
+        p = state.players[idx]
         if p.is_fantasy and not p.board.is_complete:
-            state.current_player_idx = probe
+            state.current_player_idx = idx  # 표시용; 실제 둘 사람은 FL+미완 누구나
             return state
-        probe = (probe + 1) % state.player_count
 
     # 모든 FL 플레이어 완료 → 일반 플레이어 첫 턴 시작
-    start = (state.dealer_idx + 1) % state.player_count
     for i in range(state.player_count):
         idx = (start + i) % state.player_count
         if not state.players[idx].is_fantasy:

@@ -96,9 +96,17 @@ class GameService:
         discards: list[Card],
     ) -> GameState:
         async with self._repo.acquire_lock(game_id):
-            state = await self._load_and_check(game_id, player_id)
+            state = await self._repo.load(game_id)
+            if state is None:
+                raise GameNotFoundError(game_id)
+            # FL은 동시 진행이므로 current_player 강제 대신 FL+미완 여부만 확인한다.
+            player = next((p for p in state.players if p.player_id == player_id), None)
+            if player is None or not player.is_fantasy or player.board.is_complete:
+                raise WrongPlayerError(
+                    f"Player {player_id} is not an eligible FL player"
+                )
             new_state = engine_place_fantasy(
-                state, placements, discards, rules=self._rules
+                state, player_id, placements, discards, rules=self._rules
             )
             await self._repo.save(new_state)
             return new_state

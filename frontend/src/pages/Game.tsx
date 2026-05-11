@@ -97,8 +97,24 @@ export function Game() {
     [gameState, playerId],
   );
 
-  const isMyTurn = !!gameState && gameState.current_player_id === playerId;
+  const isFantasyPhase = gameState?.phase === "fantasy_turn";
+  const isBoardComplete = (p: PlayerState): boolean =>
+    p.board.top_count + p.board.middle_count + p.board.bottom_count >= 13;
+  const myFlIncomplete =
+    !!me && me.is_fantasy && !isBoardComplete(me);
+  const isMyTurn =
+    !!gameState &&
+    (isFantasyPhase
+      ? myFlIncomplete
+      : gameState.current_player_id === playerId);
   const handCount = me?.hand.length ?? 0;
+
+  const pendingFlPlayers = useMemo(() => {
+    if (!gameState || !isFantasyPhase) return [];
+    return gameState.players.filter(
+      (p) => p.is_fantasy && !isBoardComplete(p),
+    );
+  }, [gameState, isFantasyPhase]);
 
   const placedIdxSet = useMemo(
     () => new Set(placed.map((p) => p.handIdx)),
@@ -267,6 +283,13 @@ export function Game() {
           {gameState ? (
             gameState.is_game_over ? (
               <span className="text-slate-500">종료</span>
+            ) : isFantasyPhase ? (
+              <>
+                <span className="font-semibold">FantasyLand 배치 중</span>
+                <span className="text-slate-400 ml-1">
+                  ({pendingFlPlayers.length}명 대기)
+                </span>
+              </>
             ) : (
               <>
                 <span className="font-semibold">{gameState.current_player_id}</span>
@@ -324,7 +347,11 @@ export function Game() {
                   player={p}
                   label={p.player_id}
                   isMe={isMe}
-                  isCurrent={p.player_id === gameState.current_player_id}
+                  isCurrent={
+                    isFantasyPhase
+                      ? p.is_fantasy && !isBoardComplete(p)
+                      : p.player_id === gameState.current_player_id
+                  }
                   isDealer={idx === gameState.dealer_idx}
                   pendingByRow={isMe ? pendingByRow : undefined}
                   selectedRow={isMe ? selectedRow : undefined}
