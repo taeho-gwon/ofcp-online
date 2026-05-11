@@ -15,7 +15,7 @@ from app.game.schemas import (
     to_placements,
 )
 from app.game.service import GameNotFoundError, GameService, WrongPlayerError
-from app.game.state import GameState
+from app.game.state import GameState, Phase
 
 logger = logging.getLogger(__name__)
 
@@ -125,3 +125,12 @@ async def _handle_action(
         return
 
     await manager.broadcast(game_id, state)
+
+    # 라운드가 종료되면 다음 라운드로 즉시 진행. 클라이언트는 표시 시점만 결정한다.
+    if state.phase == Phase.DONE:
+        try:
+            advanced = await svc.advance_round(game_id)
+        except (GameNotFoundError, GameLockError, ValueError) as e:
+            logger.warning("auto-advance failed for %s: %s", game_id, e)
+            return
+        await manager.broadcast(game_id, advanced)

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { GameSocket } from "../api/ws";
-import type { Card, Matchup, PlayerState, Row, WsClientMsg } from "../api/types";
+import type { Card, PlayerState, Row, WsClientMsg } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
 import { useGameStore } from "../store/gameStore";
 import { Hand } from "../components/Hand";
@@ -17,14 +17,6 @@ import { ResultModal } from "../components/ResultModal";
 import { RulesModal } from "../components/RulesModal";
 import { isFoulBoard } from "../lib/handEval";
 
-interface RoundSnapshot {
-  matchups: Matchup[];
-  players: PlayerState[];
-  roundNumber: number;
-  isBonusRound: boolean;
-  isGameOver: boolean;
-}
-
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
   const [search] = useSearchParams();
@@ -36,6 +28,7 @@ export function Game() {
   const selectedRow = useGameStore((s) => s.selectedRow);
   const placed = useGameStore((s) => s.placed);
   const setGameState = useGameStore((s) => s.setGameState);
+  const commitPendingState = useGameStore((s) => s.commitPendingState);
   const setConnected = useGameStore((s) => s.setConnected);
   const setError = useGameStore((s) => s.setError);
   const selectRow = useGameStore((s) => s.selectRow);
@@ -44,11 +37,9 @@ export function Game() {
   const clearPending = useGameStore((s) => s.clearPending);
 
   const socketRef = useRef<GameSocket | null>(null);
-  const [snapshot, setSnapshot] = useState<RoundSnapshot | null>(null);
   const [animationDone, setAnimationDone] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const autoAdvancedRef = useRef(false);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
@@ -71,42 +62,18 @@ export function Game() {
     };
   }, [gameId, playerId, setConnected, setGameState, setError]);
 
-  // 라운드/게임 종료 진입 시 스냅샷 캡처. phase=done이면 즉시 next_round를 발송해
-  // 백그라운드로 다음 라운드를 진행시키고, 모달은 결과 표시 용도로만 유지한다.
-  // 스냅샷은 phase 변화로 자동 비우지 않고 사용자가 모달을 닫을 때만 클리어한다.
-  useEffect(() => {
-    if (!gameState) return;
-    const isDone = gameState.phase === "done";
-    const isGameOver = gameState.phase === "game_over";
-    if ((isDone || isGameOver) && gameState.matchups) {
-      setSnapshot((prev) =>
-        prev
-          ? prev
-          : {
-              matchups: gameState.matchups!,
-              players: gameState.players,
-              roundNumber: gameState.round_number,
-              isBonusRound: gameState.is_bonus_round,
-              isGameOver: gameState.is_game_over,
-            },
-      );
-      if (isDone && !autoAdvancedRef.current) {
-        autoAdvancedRef.current = true;
-        socketRef.current?.send({ action: "next_round" });
-      }
-    } else {
-      // 새 라운드가 시작되면 다음 종료 시점을 위해 트리거 가드만 해제. snapshot은 유지.
-      autoAdvancedRef.current = false;
-    }
-  }, [gameState]);
-
   const handleAnimationDone = () => {
     setAnimationDone(true);
     setModalOpen(true);
   };
 
+  // 결과 phase 동안 gameState는 스토어에 의해 결과 시점에 고정 유지된다(다음 라운드
+  // state는 pendingState로 보류됨). matchups가 있으면 그대로 애니메이션을 돌린다.
+  const inResultPhase =
+    gameState?.phase === "done" || gameState?.phase === "game_over";
+
   const anim = useMatchupAnimation(
-    snapshot && !animationDone ? snapshot.matchups : null,
+    inResultPhase && !animationDone ? (gameState?.matchups ?? null) : null,
     handleAnimationDone,
   );
 
@@ -239,8 +206,9 @@ export function Game() {
 
   const handleCloseModal = () => {
     setModalOpen(false);
-    setSnapshot(null);
     setAnimationDone(false);
+    // 보류된 다음 라운드 state가 있으면 이제 적용. 없으면(GAME_OVER 등) 그대로.
+    commitPendingState();
   };
 
   if (!gameId || !playerId) {
@@ -337,7 +305,11 @@ export function Game() {
             hasPending={placed.length > 0 || selectedRow !== null}
             onConfirm={handleConfirm}
             onCancel={clearPending}
-            onShowResult={snapshot ? () => setModalOpen(true) : undefined}
+            onShowResult={
+              inResultPhase && animationDone
+                ? () => setModalOpen(true)
+                : undefined
+            }
           />
         </section>
       )}
@@ -394,15 +366,15 @@ export function Game() {
 
       {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} />}
 
-      {modalOpen && snapshot && gameState && (
+      {modalOpen && gameState && gameState.matchups && (
         <ResultModal
-          players={snapshot.players}
-          matchups={snapshot.matchups}
+          players={gameState.players}
+          matchups={gameState.matchups}
           myPlayerId={playerId}
-          roundNumber={snapshot.roundNumber}
+          roundNumber={gameState.round_number}
           maxRounds={gameState.max_rounds}
-          isBonusRound={snapshot.isBonusRound}
-          isGameOver={snapshot.isGameOver}
+          isBonusRound={gameState.is_bonus_round}
+          isGameOver={gameState.is_game_over}
           onClose={handleCloseModal}
           onNewRoom={() => navigate("/")}
         />
