@@ -127,6 +127,31 @@ class TestStartNextRound:
         assert state.is_bonus_round is False
         assert all(not p.is_fantasy for p in state.players)
 
+    def test_normal_round_rotates_dealer(self):
+        state = self._done_state_with_carryover({"p0": None, "p1": None, "p2": None})
+        state.dealer_idx = 0
+
+        start_next_round(state)
+        assert state.dealer_idx == 1
+        # 첫 차례는 딜러+1 (= p2)
+        assert state.current_player_idx == 2
+
+        state.phase = Phase.DONE
+        for p in state.players:
+            p.next_fantasy_cards = None
+        start_next_round(state)
+        assert state.dealer_idx == 2
+        assert state.current_player_idx == 0
+
+    def test_bonus_round_keeps_dealer(self):
+        state = self._done_state_with_carryover({"p0": None, "p1": 14})
+        state.dealer_idx = 0
+
+        start_next_round(state)
+
+        assert state.is_bonus_round is True
+        assert state.dealer_idx == 0  # 보너스 라운드는 회전 없음
+
     def test_bonus_after_fl_holds_round_number(self):
         state = self._done_state_with_carryover({"p0": None, "p1": 14})
         state.round_number = 5

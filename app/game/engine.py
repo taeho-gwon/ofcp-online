@@ -79,6 +79,7 @@ def start_next_round(state: GameState, rules: Ruleset = PINEAPPLE_OFC) -> GameSt
     else:
         state.is_bonus_round = False
         state.round_number += 1
+        state.dealer_idx = (state.dealer_idx + 1) % state.player_count
 
     if is_bonus:
         state.phase = Phase.FANTASY_TURN
