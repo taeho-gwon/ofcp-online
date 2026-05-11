@@ -219,13 +219,8 @@ export function Game() {
     );
   }
 
-  const showSkipHint = anim.active;
-
   return (
-    <div
-      className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3"
-      onClick={showSkipHint ? anim.skip : undefined}
-    >
+    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3">
       <header className="flex items-center justify-between">
         <button
           type="button"
@@ -325,12 +320,6 @@ export function Game() {
             onUnplace={unplace}
           />
         </section>
-      )}
-
-      {showSkipHint && (
-        <div className="text-center text-xs text-slate-400 -mt-1">
-          화면을 클릭하면 건너뛸 수 있어요
-        </div>
       )}
 
       <main className="flex-1 flex items-start justify-center">
