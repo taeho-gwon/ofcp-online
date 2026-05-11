@@ -14,6 +14,7 @@ import {
 } from "../components/ActionBar";
 import { useMatchupAnimation } from "../components/useMatchupAnimation";
 import { ResultModal } from "../components/ResultModal";
+import { RulesModal } from "../components/RulesModal";
 import { isFoulBoard } from "../lib/handEval";
 
 interface RoundSnapshot {
@@ -43,6 +44,7 @@ export function Game() {
   const [snapshot, setSnapshot] = useState<RoundSnapshot | null>(null);
   const [animationDone, setAnimationDone] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
@@ -278,6 +280,14 @@ export function Game() {
               <span className="text-rose-600">● 연결 끊김</span>
             )}
           </span>
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="text-xs px-2 py-0.5 rounded border border-slate-300 hover:bg-slate-100 text-slate-600"
+            title="룰 보기"
+          >
+            룰
+          </button>
         </div>
         <div className="text-sm text-slate-700">
           {gameState ? (
@@ -364,6 +374,8 @@ export function Game() {
           </div>
         )}
       </main>
+
+      {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} />}
 
       {modalOpen && snapshot && gameState && (
         <ResultModal
