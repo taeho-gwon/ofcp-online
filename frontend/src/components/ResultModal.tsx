@@ -220,7 +220,7 @@ function FinalStandings({
                       : "text-slate-500"
                 }`}
               >
-                {p.score > 0 ? `+${p.score}` : p.score}
+                {p.score}
               </span>
             </div>
           );
