@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      REDIS_URL: redis://redis:6379
+      # 단일 도메인 운영이라 CORS 자체는 거의 의미가 없지만, 명시할 수 있음.
+      # 예: ALLOWED_ORIGINS='["https://example.com"]'
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-["http://localhost"]}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # 도메인이 있으면 SITE_ADDRESS=example.com (자동 TLS), 없으면 :80 (HTTP만).
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:

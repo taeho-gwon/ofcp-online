@@ -1,0 +1,6 @@
+# SITE_ADDRESS: 도메인(예: example.com) → 자동 TLS, 또는 ":80" → HTTP만.
+# Caddy v2의 reverse_proxy는 WebSocket을 자동 처리한다.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	reverse_proxy api:8000
+}
