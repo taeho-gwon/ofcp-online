@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from redis.asyncio import Redis
 
+from app.config import settings
 from app.core.redis import get_redis
 from app.game.repository import GameLockError, GameRepository
 from app.game.schemas import (
@@ -61,7 +62,7 @@ async def game_socket(
     player_id: Annotated[str, Query()],
     redis: Annotated[Redis, Depends(get_redis)],
 ) -> None:
-    svc = GameService(GameRepository(redis))
+    svc = GameService(GameRepository(redis, ttl_seconds=settings.game_ttl_seconds))
     await manager.connect(game_id, player_id, websocket)
 
     # 입장 시 현재 상태 즉시 전송

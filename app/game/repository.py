@@ -10,6 +10,7 @@ from app.game.state import GameState
 GAME_KEY = "game:{game_id}"
 LOCK_KEY = "game:{game_id}:lock"
 LOCK_TTL_SECONDS = 5
+DEFAULT_GAME_TTL_SECONDS = 3600
 
 
 class GameLockError(RuntimeError):
@@ -17,13 +18,18 @@ class GameLockError(RuntimeError):
 
 
 class GameRepository:
-    def __init__(self, redis: Redis) -> None:
+    def __init__(
+        self, redis: Redis, ttl_seconds: int = DEFAULT_GAME_TTL_SECONDS
+    ) -> None:
         self._redis = redis
+        self._ttl_seconds = ttl_seconds
 
     async def save(self, state: GameState) -> None:
+        # save마다 TTL을 다시 걸어 활성 게임은 유지되고 방치된 게임만 만료된다.
         await self._redis.set(
             GAME_KEY.format(game_id=state.game_id),
             json.dumps(state.to_dict()),
+            ex=self._ttl_seconds,
         )
 
     async def load(self, game_id: str) -> GameState | None:

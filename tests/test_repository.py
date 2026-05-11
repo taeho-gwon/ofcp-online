@@ -46,3 +46,14 @@ async def test_lock_releases_after_block(repo: GameRepository):
     # 다시 잡을 수 있어야 함
     async with repo.acquire_lock("g1"):
         pass
+
+
+async def test_save_sets_ttl():
+    """save마다 TTL이 갱신되어 활성 게임은 유지되고 방치된 게임만 만료된다."""
+    redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    repo = GameRepository(redis, ttl_seconds=120)
+    state = create_game("g1", ["p0", "p1"])
+
+    await repo.save(state)
+    ttl = await redis.ttl("game:g1")
+    assert 0 < ttl <= 120

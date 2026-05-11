@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from redis.asyncio import Redis
 
+from app.config import settings
 from app.core.redis import get_redis
 from app.game.repository import GameRepository
 from app.game.schemas import (
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/games", tags=["games"])
 
 
 def get_game_service(redis: Annotated[Redis, Depends(get_redis)]) -> GameService:
-    return GameService(GameRepository(redis))
+    return GameService(GameRepository(redis, ttl_seconds=settings.game_ttl_seconds))
 
 
 ServiceDep = Annotated[GameService, Depends(get_game_service)]
