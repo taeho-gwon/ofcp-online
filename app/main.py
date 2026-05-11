@@ -1,14 +1,24 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import ws
 from app.api.router import router
 from app.config import settings
+from app.core.redis import close_redis
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="OFCP Online")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await close_redis()
+
+
+app = FastAPI(title="OFCP Online", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(ws.router)
 
 
 @app.get("/health")

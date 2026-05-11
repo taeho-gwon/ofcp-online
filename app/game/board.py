@@ -21,6 +21,10 @@ class PlayerBoard:
         )
 
     @property
+    def is_empty(self) -> bool:
+        return not (self.top or self.middle or self.bottom)
+
+    @property
     def is_foul(self) -> bool:
         if not self.is_complete:
             return False

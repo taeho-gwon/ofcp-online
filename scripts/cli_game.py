@@ -213,9 +213,9 @@ def print_result(state: GameState):
         foul_str = "  [FOUL]" if b.is_foul else ""
         print(f"\n  {p.player_id}{foul_str}")
         if not b.is_foul:
-            top_rank = evaluate(b.top)[0].name
-            mid_rank = evaluate(b.middle)[0].name
-            bot_rank = evaluate(b.bottom)[0].name
+            top_rank = evaluate(b.top).rank.name
+            mid_rank = evaluate(b.middle).rank.name
+            bot_rank = evaluate(b.bottom).rank.name
             rt = royalty_top(b)
             rm = royalty_middle(b)
             rb = royalty_bottom(b)

@@ -7,3 +7,25 @@
 body {
   margin: 0;
 }
+
+@keyframes ofc-pop-center {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -55%) scale(0.95); }
+}
+
+.ofc-pop-center {
+  animation: ofc-pop-center 1s ease-out forwards;
+}
+
+@keyframes ofc-pop-row {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}
+
+.ofc-pop-row {
+  animation: ofc-pop-row 0.9s ease-out forwards;
+}
