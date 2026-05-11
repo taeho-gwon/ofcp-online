@@ -24,11 +24,15 @@ ServiceDep = Annotated[GameService, Depends(get_game_service)]
 
 @router.post("", response_model=GameStateResponse, status_code=201)
 async def create_game(req: CreateGameRequest, svc: ServiceDep) -> GameStateResponse:
-    state = await svc.create_game(
-        player_ids=req.player_ids,
-        dealer_idx=req.dealer_idx,
-        fantasy_players=req.fantasy_players,
-    )
+    try:
+        state = await svc.create_game(
+            player_ids=req.player_ids,
+            dealer_idx=req.dealer_idx,
+            fantasy_players=req.fantasy_players,
+            ruleset_name=req.ruleset_name,
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Unknown ruleset: {e}") from e
     return serialize_state(state)
 
 

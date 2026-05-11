@@ -3,8 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createGame } from "../api/client";
 
+type Preset = "pineapple" | "pineapple-short";
+
+const PRESETS: { value: Preset; label: string; sub: string }[] = [
+  { value: "pineapple", label: "12라운드", sub: "100점" },
+  { value: "pineapple-short", label: "6라운드", sub: "50점" },
+];
+
 export function Entry() {
   const [names, setNames] = useState<string[]>(["", "", ""]);
+  const [preset, setPreset] = useState<Preset>("pineapple");
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<{
     gameId: string;
@@ -28,7 +36,10 @@ export function Entry() {
 
     setCreating(true);
     try {
-      const state = await createGame({ player_ids: playerIds });
+      const state = await createGame({
+        player_ids: playerIds,
+        ruleset_name: preset,
+      });
       setCreated({ gameId: state.game_id, players: playerIds });
     } catch (e) {
       toast.error(`방 생성 실패: ${(e as Error).message}`);
@@ -63,6 +74,29 @@ export function Entry() {
             className="px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         ))}
+        <div className="flex flex-col gap-1.5">
+          <div className="text-xs text-slate-500">매치 길이</div>
+          <div className="grid grid-cols-2 gap-2">
+            {PRESETS.map((p) => {
+              const active = preset === p.value;
+              return (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPreset(p.value)}
+                  className={`px-3 py-2 rounded border text-sm flex flex-col items-center ${
+                    active
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="font-semibold">{p.label}</span>
+                  <span className="text-xs text-slate-500">{p.sub}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <button
           type="button"
           onClick={handleCreate}

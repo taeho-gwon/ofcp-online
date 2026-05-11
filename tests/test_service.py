@@ -105,6 +105,23 @@ async def test_advance_round_idempotent_after_already_advanced(svc: GameService)
     assert second.phase == first.phase
 
 
+async def test_create_game_with_short_ruleset(svc: GameService):
+    """pineapple-short 프리셋은 6라운드/시작 점수 50점으로 생성된다."""
+    state = await svc.create_game(
+        ["p0", "p1"], dealer_idx=0, ruleset_name="pineapple-short"
+    )
+    assert state.ruleset_name == "pineapple-short"
+    assert all(p.score == 50 for p in state.players)
+
+    loaded = await svc.get_state(state.game_id)
+    assert loaded.ruleset_name == "pineapple-short"
+
+
+async def test_create_game_unknown_ruleset_raises(svc: GameService):
+    with pytest.raises(KeyError):
+        await svc.create_game(["p0", "p1"], ruleset_name="nope")
+
+
 async def test_advance_round_increments_round_number(svc: GameService):
     state = await svc.create_game(["p0", "p1"], dealer_idx=0)
     # 라운드 채점이 끝난 상태로 직접 조작 후 영속화

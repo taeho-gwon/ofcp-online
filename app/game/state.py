@@ -54,6 +54,8 @@ class GameState:
     phase: Phase = Phase.FIRST_TURN
     round_number: int = 1  # 일반 라운드 카운트 (1부터, 보너스 라운드는 증가 안 함)
     is_bonus_round: bool = False  # 현재 라운드가 FantasyLand 보너스 라운드인지
+    # RULESETS 키. 게임 생성 시 고정되며 라이프사이클 동안 유지된다.
+    ruleset_name: str = "pineapple"
 
     @property
     def current_player(self) -> PlayerState:
@@ -76,6 +78,7 @@ class GameState:
             "phase": self.phase,
             "round_number": self.round_number,
             "is_bonus_round": self.is_bonus_round,
+            "ruleset_name": self.ruleset_name,
         }
 
     @classmethod
@@ -89,4 +92,5 @@ class GameState:
         gs.phase = Phase(data["phase"])
         gs.round_number = data["round_number"]
         gs.is_bonus_round = data["is_bonus_round"]
+        gs.ruleset_name = data.get("ruleset_name", "pineapple")
         return gs

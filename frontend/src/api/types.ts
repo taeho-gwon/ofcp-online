@@ -89,6 +89,7 @@ export interface CreateGameRequest {
   player_ids: string[];
   dealer_idx?: number;
   fantasy_players?: Record<string, number> | null;
+  ruleset_name?: string;
 }
 
 // WS 인바운드

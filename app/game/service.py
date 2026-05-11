@@ -33,24 +33,30 @@ class GameService:
     def __init__(
         self,
         repo: GameRepository,
-        ruleset_name: str = "pineapple",
+        default_ruleset_name: str = "pineapple",
     ) -> None:
         self._repo = repo
-        self._rules: Ruleset = RULESETS[ruleset_name]
+        self._default_ruleset_name = default_ruleset_name
+
+    @staticmethod
+    def _rules_of(state: GameState) -> Ruleset:
+        return RULESETS[state.ruleset_name]
 
     async def create_game(
         self,
         player_ids: list[str],
         dealer_idx: int = 0,
         fantasy_players: dict[str, int] | None = None,
+        ruleset_name: str | None = None,
     ) -> GameState:
         game_id = uuid.uuid4().hex[:12]
+        rules = RULESETS[ruleset_name or self._default_ruleset_name]
         state = engine_create_game(
             game_id=game_id,
             player_ids=player_ids,
             dealer_idx=dealer_idx,
             fantasy_players=fantasy_players,
-            rules=self._rules,
+            rules=rules,
         )
         await self._repo.save(state)
         return state
@@ -69,7 +75,9 @@ class GameService:
     ) -> GameState:
         async with self._repo.acquire_lock(game_id):
             state = await self._load_and_check(game_id, player_id)
-            new_state = engine_place_first(state, placements, rules=self._rules)
+            new_state = engine_place_first(
+                state, placements, rules=self._rules_of(state)
+            )
             await self._repo.save(new_state)
             return new_state
 
@@ -83,7 +91,7 @@ class GameService:
         async with self._repo.acquire_lock(game_id):
             state = await self._load_and_check(game_id, player_id)
             new_state = engine_place_normal(
-                state, placements, discard, rules=self._rules
+                state, placements, discard, rules=self._rules_of(state)
             )
             await self._repo.save(new_state)
             return new_state
@@ -106,7 +114,7 @@ class GameService:
                     f"Player {player_id} is not an eligible FL player"
                 )
             new_state = engine_place_fantasy(
-                state, player_id, placements, discards, rules=self._rules
+                state, player_id, placements, discards, rules=self._rules_of(state)
             )
             await self._repo.save(new_state)
             return new_state
@@ -119,7 +127,7 @@ class GameService:
             # 동시 발송 / 재발송에 안전하도록 phase != DONE이면 현재 state 그대로 반환.
             if state.phase != Phase.DONE:
                 return state
-            new_state = engine_start_next_round(state, rules=self._rules)
+            new_state = engine_start_next_round(state, rules=self._rules_of(state))
             await self._repo.save(new_state)
             return new_state
 

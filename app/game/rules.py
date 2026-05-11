@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.game.hand import HandRank
 
@@ -95,6 +95,15 @@ PINEAPPLE_OFC = Ruleset(
 )
 
 
+PINEAPPLE_SHORT = replace(
+    PINEAPPLE_OFC,
+    name="pineapple-short",
+    max_rounds=6,
+    starting_score=50,
+)
+
+
 RULESETS: dict[str, Ruleset] = {
     "pineapple": PINEAPPLE_OFC,
+    "pineapple-short": PINEAPPLE_SHORT,
 }

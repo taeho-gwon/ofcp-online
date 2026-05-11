@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from app.game.board import PlayerBoard
 from app.game.card import Card, Rank, Suit
 from app.game.hand import HandValue, format_hand_value
-from app.game.rules import PINEAPPLE_OFC, Ruleset
+from app.game.rules import PINEAPPLE_OFC, RULESETS, Ruleset
 from app.game.scoring import (
     head_to_head_detail,
     royalty_bottom,
@@ -38,6 +38,7 @@ class CreateGameRequest(BaseModel):
     player_ids: list[str] = Field(min_length=2, max_length=3)
     dealer_idx: int = 0
     fantasy_players: dict[str, int] | None = None
+    ruleset_name: str | None = None  # RULESETS 키. None이면 서비스 기본값.
 
 
 class FirstTurnMoveRequest(BaseModel):
@@ -190,9 +191,11 @@ def _compute_done_extras(
 def serialize_state(
     state: GameState,
     viewer_id: str | None = None,
-    rules: Ruleset = PINEAPPLE_OFC,
+    rules: Ruleset | None = None,
 ) -> GameStateResponse:
     """viewer_id가 None이면 모든 hand 노출(서버 내부용). 아니면 본인 hand만 노출."""
+    if rules is None:
+        rules = RULESETS.get(state.ruleset_name, PINEAPPLE_OFC)
     show_result = state.phase in (Phase.DONE, Phase.GAME_OVER)
     matchups: list[MatchupSchema] | None = None
     deltas: dict[str, int] = {}

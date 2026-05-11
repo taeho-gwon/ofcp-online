@@ -34,6 +34,7 @@ def create_game(
         deck=deck,
         dealer_idx=dealer_idx,
         is_bonus_round=bool(fantasy_set),
+        ruleset_name=rules.name,
     )
 
     if fantasy_set:
