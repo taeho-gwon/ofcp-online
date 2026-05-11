@@ -20,6 +20,9 @@ import { isFoulBoard } from "../lib/handEval";
 interface RoundSnapshot {
   matchups: Matchup[];
   players: PlayerState[];
+  roundNumber: number;
+  isBonusRound: boolean;
+  isGameOver: boolean;
 }
 
 export function Game() {
@@ -45,6 +48,7 @@ export function Game() {
   const [animationDone, setAnimationDone] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const autoAdvancedRef = useRef(false);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
@@ -67,20 +71,32 @@ export function Game() {
     };
   }, [gameId, playerId, setConnected, setGameState, setError]);
 
-  // 라운드 종료/게임 종료 진입 시 스냅샷 잡기 (이후 gameState 객체가 새로 와도 동일 ref 유지)
+  // 라운드/게임 종료 진입 시 스냅샷 캡처. phase=done이면 즉시 next_round를 발송해
+  // 백그라운드로 다음 라운드를 진행시키고, 모달은 결과 표시 용도로만 유지한다.
+  // 스냅샷은 phase 변화로 자동 비우지 않고 사용자가 모달을 닫을 때만 클리어한다.
   useEffect(() => {
     if (!gameState) return;
-    const isResultPhase =
-      gameState.phase === "done" || gameState.phase === "game_over";
-    if (isResultPhase && gameState.matchups) {
-      setSnapshot((prev) => {
-        if (prev) return prev;
-        return { matchups: gameState.matchups!, players: gameState.players };
-      });
+    const isDone = gameState.phase === "done";
+    const isGameOver = gameState.phase === "game_over";
+    if ((isDone || isGameOver) && gameState.matchups) {
+      setSnapshot((prev) =>
+        prev
+          ? prev
+          : {
+              matchups: gameState.matchups!,
+              players: gameState.players,
+              roundNumber: gameState.round_number,
+              isBonusRound: gameState.is_bonus_round,
+              isGameOver: gameState.is_game_over,
+            },
+      );
+      if (isDone && !autoAdvancedRef.current) {
+        autoAdvancedRef.current = true;
+        socketRef.current?.send({ action: "next_round" });
+      }
     } else {
-      setSnapshot(null);
-      setAnimationDone(false);
-      setModalOpen(false);
+      // 새 라운드가 시작되면 다음 종료 시점을 위해 트리거 가드만 해제. snapshot은 유지.
+      autoAdvancedRef.current = false;
     }
   }, [gameState]);
 
@@ -221,9 +237,10 @@ export function Game() {
     socketRef.current?.send(msg);
   };
 
-  const handleAdvanceRound = () => {
-    socketRef.current?.send({ action: "next_round" });
+  const handleCloseModal = () => {
     setModalOpen(false);
+    setSnapshot(null);
+    setAnimationDone(false);
   };
 
   if (!gameId || !playerId) {
@@ -379,20 +396,14 @@ export function Game() {
 
       {modalOpen && snapshot && gameState && (
         <ResultModal
-          players={
-            gameState.phase === "done" || gameState.phase === "game_over"
-              ? gameState.players
-              : snapshot.players
-          }
+          players={snapshot.players}
           matchups={snapshot.matchups}
           myPlayerId={playerId}
-          roundNumber={gameState.round_number}
+          roundNumber={snapshot.roundNumber}
           maxRounds={gameState.max_rounds}
-          isBonusRound={gameState.is_bonus_round}
-          isGameOver={gameState.is_game_over}
-          canAdvance={gameState.phase === "done"}
-          onClose={() => setModalOpen(false)}
-          onAdvance={handleAdvanceRound}
+          isBonusRound={snapshot.isBonusRound}
+          isGameOver={snapshot.isGameOver}
+          onClose={handleCloseModal}
           onNewRoom={() => navigate("/")}
         />
       )}

@@ -18,7 +18,7 @@ from app.game.engine import (
 )
 from app.game.repository import GameRepository
 from app.game.rules import RULESETS, Ruleset
-from app.game.state import GameState
+from app.game.state import GameState, Phase
 
 
 class GameNotFoundError(LookupError):
@@ -116,6 +116,9 @@ class GameService:
             state = await self._repo.load(game_id)
             if state is None:
                 raise GameNotFoundError(game_id)
+            # 동시 발송 / 재발송에 안전하도록 phase != DONE이면 현재 state 그대로 반환.
+            if state.phase != Phase.DONE:
+                return state
             new_state = engine_start_next_round(state, rules=self._rules)
             await self._repo.save(new_state)
             return new_state

@@ -8,9 +8,7 @@ interface Props {
   maxRounds: number;
   isBonusRound: boolean;
   isGameOver: boolean;
-  canAdvance: boolean;
   onClose: () => void;
-  onAdvance?: () => void;
   onNewRoom?: () => void;
 }
 
@@ -246,9 +244,7 @@ export function ResultModal({
   maxRounds,
   isBonusRound,
   isGameOver,
-  canAdvance,
   onClose,
-  onAdvance,
   onNewRoom,
 }: Props) {
   const heading = isGameOver
@@ -324,23 +320,13 @@ export function ResultModal({
               새 방으로
             </button>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-2 text-sm rounded border border-slate-300 hover:bg-slate-50"
-              >
-                닫기
-              </button>
-              <button
-                type="button"
-                onClick={onAdvance}
-                disabled={!canAdvance}
-                className="px-4 py-2 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300"
-              >
-                다음 라운드
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              계속
+            </button>
           )}
         </div>
       </div>

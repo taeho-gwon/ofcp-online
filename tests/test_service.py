@@ -72,11 +72,37 @@ async def test_advance_round_missing_game_raises(svc: GameService):
         await svc.advance_round("nope")
 
 
-async def test_advance_round_wrong_phase_raises(svc: GameService):
+async def test_advance_round_non_done_phase_is_noop(svc: GameService):
+    """advance_round는 idempotent — phase != DONE이면 현재 state를 그대로 반환한다.
+
+    프론트엔드에서 라운드 종료 시 자동으로 next_round를 발송하므로 동시 호출 및
+    재발송이 안전해야 한다.
+    """
     state = await svc.create_game(["p0", "p1"], dealer_idx=0)
-    # FIRST_TURN에서는 advance 불가
-    with pytest.raises(ValueError):
-        await svc.advance_round(state.game_id)
+    assert state.phase == Phase.FIRST_TURN
+
+    same = await svc.advance_round(state.game_id)
+    assert same.phase == Phase.FIRST_TURN
+    assert same.round_number == state.round_number
+
+
+async def test_advance_round_idempotent_after_already_advanced(svc: GameService):
+    """advance가 한 번 진행된 뒤 재호출되어도 에러 없이 같은 새 라운드를 반환."""
+    state = await svc.create_game(["p0", "p1"], dealer_idx=0)
+    state.phase = Phase.DONE
+    state.round_number = 2
+    for p in state.players:
+        p.next_fantasy_cards = None
+    await svc._repo.save(state)
+
+    first = await svc.advance_round(state.game_id)
+    assert first.round_number == 3
+    assert first.phase == Phase.FIRST_TURN
+
+    # 두 번째 호출은 이미 진행됐으므로 그대로 반환
+    second = await svc.advance_round(state.game_id)
+    assert second.round_number == 3
+    assert second.phase == first.phase
 
 
 async def test_advance_round_increments_round_number(svc: GameService):
