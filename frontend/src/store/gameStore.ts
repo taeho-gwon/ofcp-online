@@ -16,6 +16,7 @@ interface GameStore {
 
   // 인터랙션 상태 (서버 상태 갱신 시 자동 초기화)
   selectedRow: Row | null;
+  selectedCardIdx: number | null;
   placed: PlacedSlot[];
 
   setGameState: (s: GameState) => void;
@@ -24,7 +25,8 @@ interface GameStore {
   setError: (e: string | null) => void;
 
   selectRow: (row: Row | null) => void;
-  placeCard: (handIdx: number) => void;
+  selectCard: (idx: number | null) => void;
+  commitPlacement: (handIdx: number, row: Row) => void;
   unplace: (handIdx: number) => void;
   clearPending: () => void;
 }
@@ -39,6 +41,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   connected: false,
   error: null,
   selectedRow: null,
+  selectedCardIdx: null,
   placed: [],
 
   setGameState: (s) => {
@@ -52,6 +55,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       gameState: s,
       pendingState: null,
       selectedRow: null,
+      selectedCardIdx: null,
       placed: [],
       error: null,
     });
@@ -63,6 +67,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       gameState: pending,
       pendingState: null,
       selectedRow: null,
+      selectedCardIdx: null,
       placed: [],
     });
   },
@@ -70,12 +75,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setError: (e) => set({ error: e }),
 
   selectRow: (row) => set({ selectedRow: row }),
+  selectCard: (idx) => set({ selectedCardIdx: idx }),
 
-  placeCard: (handIdx) => {
-    const { selectedRow, placed } = get();
-    if (selectedRow === null) return;
+  commitPlacement: (handIdx, row) => {
+    const { placed } = get();
     if (placed.some((p) => p.handIdx === handIdx)) return;
-    set({ placed: [...placed, { handIdx, row: selectedRow }] });
+    set({
+      placed: [...placed, { handIdx, row }],
+      selectedRow: null,
+      selectedCardIdx: null,
+    });
   },
 
   unplace: (handIdx) => {
@@ -83,5 +92,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ placed: placed.filter((p) => p.handIdx !== handIdx) });
   },
 
-  clearPending: () => set({ selectedRow: null, placed: [] }),
+  clearPending: () =>
+    set({ selectedRow: null, selectedCardIdx: null, placed: [] }),
 }));

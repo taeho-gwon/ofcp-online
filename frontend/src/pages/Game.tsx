@@ -32,7 +32,9 @@ export function Game() {
   const setConnected = useGameStore((s) => s.setConnected);
   const setError = useGameStore((s) => s.setError);
   const selectRow = useGameStore((s) => s.selectRow);
-  const placeCard = useGameStore((s) => s.placeCard);
+  const selectCard = useGameStore((s) => s.selectCard);
+  const selectedCardIdx = useGameStore((s) => s.selectedCardIdx);
+  const commitPlacement = useGameStore((s) => s.commitPlacement);
   const unplace = useGameStore((s) => s.unplace);
   const clearPending = useGameStore((s) => s.clearPending);
 
@@ -127,16 +129,31 @@ export function Game() {
 
   const handleRowSelect = (row: Row) => {
     if (!isMyTurn) return;
+    // 카드 먼저 선택돼 있으면 그 카드를 이 줄에 배치.
+    if (selectedCardIdx !== null) {
+      if (rowUsed(row) >= ROW_CAPACITY[row]) {
+        toast.error(`${row} 줄이 가득 찼습니다.`);
+        return;
+      }
+      commitPlacement(selectedCardIdx, row);
+      return;
+    }
     selectRow(selectedRow === row ? null : row);
   };
 
   const handleHandPlace = (idx: number) => {
-    if (!isMyTurn || selectedRow === null) return;
-    if (rowUsed(selectedRow) >= ROW_CAPACITY[selectedRow]) {
-      toast.error(`${selectedRow} 줄이 가득 찼습니다.`);
+    if (!isMyTurn) return;
+    // 줄이 먼저 선택돼 있으면 이 카드를 그 줄에 배치.
+    if (selectedRow !== null) {
+      if (rowUsed(selectedRow) >= ROW_CAPACITY[selectedRow]) {
+        toast.error(`${selectedRow} 줄이 가득 찼습니다.`);
+        return;
+      }
+      commitPlacement(idx, selectedRow);
       return;
     }
-    placeCard(idx);
+    // 둘 다 선택 전 → 카드 선택/해제 토글.
+    selectCard(selectedCardIdx === idx ? null : idx);
   };
 
   const handlePendingClick = (handIdx: number) => {
@@ -297,7 +314,11 @@ export function Game() {
           <ActionBar
             phase={gameState.phase}
             isMyTurn={isMyTurn}
-            hasPending={placed.length > 0 || selectedRow !== null}
+            hasPending={
+              placed.length > 0 ||
+              selectedRow !== null ||
+              selectedCardIdx !== null
+            }
             onConfirm={handleConfirm}
             onCancel={clearPending}
             onShowResult={
@@ -315,7 +336,7 @@ export function Game() {
             hand={me.hand}
             placedIdxSet={placedIdxSet}
             enabled={isMyTurn}
-            rowSelected={selectedRow !== null}
+            selectedIdx={selectedCardIdx}
             onPlace={handleHandPlace}
             onUnplace={unplace}
           />

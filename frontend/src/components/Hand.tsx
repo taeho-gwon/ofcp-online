@@ -28,7 +28,7 @@ interface Props {
   hand: Card[];
   placedIdxSet: Set<number>;
   enabled: boolean;
-  rowSelected: boolean;
+  selectedIdx: number | null;
   onPlace: (idx: number) => void;
   onUnplace: (idx: number) => void;
 }
@@ -37,7 +37,7 @@ export function Hand({
   hand,
   placedIdxSet,
   enabled,
-  rowSelected,
+  selectedIdx,
   onPlace,
   onUnplace,
 }: Props) {
@@ -73,7 +73,8 @@ export function Hand({
         {ordered.map((i) => {
           const c = hand[i];
           const isPlaced = placedIdxSet.has(i);
-          const clickable = enabled && (isPlaced || rowSelected);
+          const isSelected = selectedIdx === i;
+          const clickable = enabled;
           const handleClick = !clickable
             ? undefined
             : isPlaced
@@ -84,6 +85,7 @@ export function Hand({
               key={i}
               card={c}
               faded={isPlaced}
+              selected={isSelected}
               onClick={handleClick}
             />
           );
