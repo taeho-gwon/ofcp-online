@@ -133,7 +133,6 @@ function MatchupRow({
   const flip = perspectiveId === m.b_id ? -1 : 1;
   const meId = flip === -1 ? m.b_id : m.a_id;
   const oppId = flip === -1 ? m.a_id : m.b_id;
-  const meLabel = perspectiveId && meId === perspectiveId ? "나" : meId;
 
   const topTotal =
     flip * (m.top_line_a + (m.top_royalty_a - m.top_royalty_b));
@@ -155,9 +154,18 @@ function MatchupRow({
   return (
     <div className="flex items-center justify-between gap-2 py-1.5 text-sm border-t border-slate-200">
       <div className="font-medium min-w-0 truncate">
-        <span className="truncate">{meLabel}</span>
-        <span className="text-slate-400 mx-1">vs</span>
-        <span className="truncate">{oppId}</span>
+        {perspectiveId ? (
+          <>
+            <span className="text-slate-400 mr-1">vs</span>
+            <span className="truncate">{oppId}</span>
+          </>
+        ) : (
+          <>
+            <span className="truncate">{meId}</span>
+            <span className="text-slate-400 mx-1">vs</span>
+            <span className="truncate">{oppId}</span>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-3 text-xs">
         {cells.map((c) => (
