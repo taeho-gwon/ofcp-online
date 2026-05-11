@@ -6,8 +6,9 @@ from app.game.card import Card, Deck
 
 
 class Phase(StrEnum):
-    FIRST_TURN = "first_turn"
-    NORMAL_TURN = "normal_turn"
+    FANTASY_TURN = "fantasy_turn"  # FL 플레이어 배치
+    FIRST_TURN = "first_turn"  # 일반 플레이어 5장 배치
+    NORMAL_TURN = "normal_turn"  # 일반 플레이어 3장→2장+버림
     SCORING = "scoring"
     DONE = "done"
 
@@ -16,9 +17,10 @@ class Phase(StrEnum):
 class PlayerState:
     player_id: str
     board: PlayerBoard = field(default_factory=PlayerBoard)
-    hand: list[Card] = field(default_factory=list)  # 현재 받은 카드
+    hand: list[Card] = field(default_factory=list)
     score: int = 0
-    in_fantasy: bool = False  # 다음 라운드 FantasyLand 진입 여부
+    is_fantasy: bool = False  # 이번 라운드 FL 여부
+    next_fantasy_cards: int | None = None  # 다음 라운드 FL 카드 수 (None=미진입)
 
     def to_dict(self) -> dict:
         return {
@@ -26,7 +28,8 @@ class PlayerState:
             "board": self.board.to_dict(),
             "hand": [c.to_dict() for c in self.hand],
             "score": self.score,
-            "in_fantasy": self.in_fantasy,
+            "is_fantasy": self.is_fantasy,
+            "next_fantasy_cards": self.next_fantasy_cards,
         }
 
     @classmethod
@@ -35,7 +38,8 @@ class PlayerState:
         ps.board = PlayerBoard.from_dict(data["board"])
         ps.hand = [Card.from_dict(c) for c in data["hand"]]
         ps.score = data["score"]
-        ps.in_fantasy = data["in_fantasy"]
+        ps.is_fantasy = data["is_fantasy"]
+        ps.next_fantasy_cards = data["next_fantasy_cards"]
         return ps
 
 
