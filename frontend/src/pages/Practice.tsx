@@ -23,7 +23,9 @@ const SUITS = [1, 2, 3, 4];
 const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 const PRACTICE_ID = "self";
 const PRACTICE_NICK = "연습";
-const PRACTICE_MAX_ROUNDS = 5;
+// 연습은 1라운드씩 반복하므로 max_rounds 의미 없음. 0으로 두면 ResultModal이
+// 'R N/M' 표시 대신 단순 '라운드 결과' 헤딩으로 갈음한다.
+const PRACTICE_MAX_ROUNDS = 0;
 
 interface Board {
   top: Card[];

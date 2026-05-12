@@ -270,7 +270,9 @@ export function ResultModal({
     ? "🏁 게임 종료"
     : isBonusRound
       ? "★ FantasyLand 결과"
-      : `라운드 ${roundNumber} / ${maxRounds}`;
+      : maxRounds > 0
+        ? `라운드 ${roundNumber} / ${maxRounds}`
+        : "라운드 결과";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
