@@ -2,6 +2,10 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /build
 
+# Vite는 VITE_* 환경변수를 빌드 시점에 inline. build arg로 받아 환경변수로 전달.
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 
