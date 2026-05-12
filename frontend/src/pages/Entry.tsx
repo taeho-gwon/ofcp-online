@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createGame } from "../api/client";
+import { useAuthStore } from "../store/authStore";
 
 type Preset = "pineapple" | "pineapple-short";
 
@@ -54,6 +55,7 @@ export function Entry() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+      <AuthHeader />
       <div className="w-full max-w-md bg-white rounded-lg shadow p-6 flex flex-col gap-4">
         <h1 className="text-2xl font-bold">OFC Online</h1>
         <p className="text-sm text-slate-600">
@@ -106,6 +108,34 @@ export function Entry() {
           {creating ? "생성 중..." : "방 생성"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function AuthHeader() {
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  return (
+    <div className="absolute top-3 right-3 text-xs flex items-center gap-2">
+      {user ? (
+        <>
+          <span className="text-slate-600">{user.nickname}</span>
+          <button
+            type="button"
+            onClick={logout}
+            className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300"
+          >
+            로그아웃
+          </button>
+        </>
+      ) : (
+        <Link
+          to="/login"
+          className="px-2 py-1 rounded bg-slate-800 text-white hover:bg-slate-700"
+        >
+          로그인
+        </Link>
+      )}
     </div>
   );
 }
