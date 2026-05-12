@@ -12,6 +12,7 @@ from app.api.router import router
 from app.config import settings
 from app.core.db import close_db
 from app.core.redis import close_redis
+from app.rooms.router import ws_router as rooms_ws_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,6 +38,7 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 app.include_router(ws.router)
+app.include_router(rooms_ws_router)
 
 
 @app.get("/health")

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { GameSocket } from "../api/ws";
 import type { Card, PlayerState, Row, WsClientMsg } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
+import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
 import { Hand } from "../components/Hand";
 import { PlayerBoard } from "../components/PlayerBoard";
@@ -16,11 +17,13 @@ import { useMatchupAnimation } from "../components/useMatchupAnimation";
 import { ResultModal } from "../components/ResultModal";
 import { RulesModal } from "../components/RulesModal";
 import { isFoulBoard } from "../lib/handEval";
+import { displayName } from "../lib/displayName";
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
-  const [search] = useSearchParams();
-  const playerId = search.get("player") ?? "";
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
+  const playerId = user?.id ?? "";
   const navigate = useNavigate();
 
   const gameState = useGameStore((s) => s.gameState);
@@ -44,8 +47,8 @@ export function Game() {
   const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
-    if (!gameId || !playerId) return;
-    const sock = new GameSocket(gameId, playerId, {
+    if (!gameId || !accessToken) return;
+    const sock = new GameSocket(gameId, accessToken, {
       onOpen: () => setConnected(true),
       onClose: () => setConnected(false),
       onMessage: (msg) => {
@@ -62,7 +65,7 @@ export function Game() {
       sock.close();
       socketRef.current = null;
     };
-  }, [gameId, playerId, setConnected, setGameState, setError]);
+  }, [gameId, accessToken, setConnected, setGameState, setError]);
 
   const handleAnimationDone = () => {
     setAnimationDone(true);
@@ -235,6 +238,7 @@ export function Game() {
       </div>
     );
   }
+  const playersMeta = gameState?.players_meta;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3">
@@ -244,7 +248,7 @@ export function Game() {
           onClick={() => navigate("/")}
           className="text-xs text-slate-500 hover:underline"
         >
-          ← 새 방
+          ← 로비
         </button>
         <div className="flex items-center gap-3 text-sm">
           {gameState && (
@@ -299,7 +303,9 @@ export function Game() {
               </>
             ) : (
               <>
-                <span className="font-semibold">{gameState.current_player_id}</span>
+                <span className="font-semibold">
+                  {displayName(gameState.current_player_id, playersMeta)}
+                </span>
                 <span className="text-slate-400 ml-1">의 차례</span>
               </>
             )
@@ -354,7 +360,7 @@ export function Game() {
                 <PlayerBoard
                   key={p.player_id}
                   player={p}
-                  label={p.player_id}
+                  label={displayName(p.player_id, playersMeta)}
                   isMe={isMe}
                   isCurrent={
                     isFantasyPhase
@@ -381,6 +387,7 @@ export function Game() {
           players={gameState.players}
           matchups={gameState.matchups}
           myPlayerId={playerId}
+          playersMeta={playersMeta}
           roundNumber={gameState.round_number}
           maxRounds={gameState.max_rounds}
           isBonusRound={gameState.is_bonus_round}

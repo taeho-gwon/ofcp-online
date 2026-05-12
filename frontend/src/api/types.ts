@@ -83,6 +83,8 @@ export interface GameState {
   is_game_over: boolean;
   players: PlayerState[];
   matchups?: Matchup[] | null;
+  // player_id(=user_id) → 표시용 닉네임. 비어 있으면 player_id 그대로 표시.
+  players_meta: Record<string, string>;
 }
 
 export interface CreateGameRequest {

@@ -124,6 +124,8 @@ class GameStateResponse(BaseModel):
     is_game_over: bool
     players: list[PlayerStateResponse]
     matchups: list[MatchupSchema] | None = None
+    # player_id(=user_id 문자열) → 표시용 닉네임 매핑. 미지정 시 player_id 자체 노출.
+    players_meta: dict[str, str] = Field(default_factory=dict)
 
 
 def to_placements(
@@ -192,6 +194,7 @@ def serialize_state(
     state: GameState,
     viewer_id: str | None = None,
     rules: Ruleset | None = None,
+    display_names: dict[str, str] | None = None,
 ) -> GameStateResponse:
     """viewer_id가 None이면 모든 hand 노출(서버 내부용). 아니면 본인 hand만 노출."""
     if rules is None:
@@ -249,4 +252,5 @@ def serialize_state(
         is_game_over=state.phase == Phase.GAME_OVER,
         players=players,
         matchups=matchups,
+        players_meta=display_names or {},
     )

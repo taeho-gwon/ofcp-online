@@ -9,11 +9,11 @@ export interface GameSocketHandlers {
 export class GameSocket {
   private ws: WebSocket;
 
-  constructor(gameId: string, playerId: string, handlers: GameSocketHandlers) {
+  constructor(gameId: string, token: string, handlers: GameSocketHandlers) {
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     const url = `${proto}//${window.location.host}/ws/games/${encodeURIComponent(
       gameId,
-    )}?player_id=${encodeURIComponent(playerId)}`;
+    )}?token=${encodeURIComponent(token)}`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => handlers.onOpen?.();

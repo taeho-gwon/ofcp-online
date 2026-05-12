@@ -1,9 +1,13 @@
 import type { Matchup, PlayerState, Row } from "../api/types";
+import { displayName } from "../lib/displayName";
+
+type PlayersMeta = Record<string, string> | undefined;
 
 interface Props {
   players: PlayerState[];
   matchups: Matchup[];
   myPlayerId: string;
+  playersMeta: PlayersMeta;
   roundNumber: number;
   maxRounds: number;
   isBonusRound: boolean;
@@ -33,9 +37,11 @@ function toneClass(n: number): string {
 function PlayerCard({
   player,
   isMe,
+  playersMeta,
 }: {
   player: PlayerState;
   isMe: boolean;
+  playersMeta: PlayersMeta;
 }) {
   const ev = player.evaluation;
   const delta = player.last_round_delta ?? 0;
@@ -47,7 +53,9 @@ function PlayerCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-semibold">{player.player_id}</span>
+          <span className="font-semibold">
+            {displayName(player.player_id, playersMeta)}
+          </span>
           {isMe && <span className="text-xs text-emerald-700">(나)</span>}
           {ev?.is_foul && (
             <span className="px-1.5 py-0.5 text-xs bg-rose-100 text-rose-700 rounded font-semibold">
@@ -123,9 +131,11 @@ function PlayerCard({
 function MatchupRow({
   m,
   perspectiveId,
+  playersMeta,
 }: {
   m: Matchup;
   perspectiveId?: string;
+  playersMeta: PlayersMeta;
 }) {
   // perspectiveId가 b쪽이면 부호를 뒤집어 표시한다. 미지정 또는 a면 그대로.
   const flip = perspectiveId === m.b_id ? -1 : 1;
@@ -155,13 +165,19 @@ function MatchupRow({
         {perspectiveId ? (
           <>
             <span className="text-slate-400 mr-1">vs</span>
-            <span className="truncate">{oppId}</span>
+            <span className="truncate">
+              {displayName(oppId, playersMeta)}
+            </span>
           </>
         ) : (
           <>
-            <span className="truncate">{meId}</span>
+            <span className="truncate">
+              {displayName(meId, playersMeta)}
+            </span>
             <span className="text-slate-400 mx-1">vs</span>
-            <span className="truncate">{oppId}</span>
+            <span className="truncate">
+              {displayName(oppId, playersMeta)}
+            </span>
           </>
         )}
       </div>
@@ -186,9 +202,11 @@ function MatchupRow({
 function FinalStandings({
   players,
   myPlayerId,
+  playersMeta,
 }: {
   players: PlayerState[];
   myPlayerId: string;
+  playersMeta: PlayersMeta;
 }) {
   const ranked = [...players].sort((a, b) => b.score - a.score);
   return (
@@ -206,7 +224,7 @@ function FinalStandings({
               <span className="flex items-center gap-2">
                 <span className="font-mono text-amber-700 w-6">#{i + 1}</span>
                 <span className={isMe ? "font-semibold text-emerald-700" : ""}>
-                  {p.player_id}
+                  {displayName(p.player_id, playersMeta)}
                   {isMe && (
                     <span className="ml-1 text-xs text-emerald-700">(나)</span>
                   )}
@@ -240,6 +258,7 @@ export function ResultModal({
   players,
   matchups,
   myPlayerId,
+  playersMeta,
   roundNumber,
   maxRounds,
   isBonusRound,
@@ -279,6 +298,7 @@ export function ResultModal({
               key={p.player_id}
               player={p}
               isMe={p.player_id === myPlayerId}
+              playersMeta={playersMeta}
             />
           ))}
         </div>
@@ -297,7 +317,12 @@ export function ResultModal({
               </div>
               <div className="rounded-md border border-slate-200 px-3">
                 {rows.map((m, i) => (
-                  <MatchupRow key={i} m={m} perspectiveId={perspective} />
+                  <MatchupRow
+                    key={i}
+                    m={m}
+                    perspectiveId={perspective}
+                    playersMeta={playersMeta}
+                  />
                 ))}
               </div>
             </div>
@@ -305,7 +330,11 @@ export function ResultModal({
         })()}
 
         {isGameOver && (
-          <FinalStandings players={players} myPlayerId={myPlayerId} />
+          <FinalStandings
+            players={players}
+            myPlayerId={myPlayerId}
+            playersMeta={playersMeta}
+          />
         )}
 
         <div className="mt-5 flex justify-end gap-2">

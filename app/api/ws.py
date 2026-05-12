@@ -1,11 +1,16 @@
 import logging
+import uuid
 from collections import defaultdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.games import load_display_names
+from app.auth.jwt import InvalidTokenError, verify_access
 from app.config import settings
+from app.core.db import get_engine
 from app.core.redis import get_redis
 from app.game.repository import GameLockError, GameRepository
 from app.game.schemas import (
@@ -17,6 +22,7 @@ from app.game.schemas import (
 )
 from app.game.service import GameNotFoundError, GameService, WrongPlayerError
 from app.game.state import GameState, Phase
+from app.users import repository as users_repo
 
 logger = logging.getLogger(__name__)
 
@@ -24,74 +30,126 @@ router = APIRouter()
 
 
 class ConnectionManager:
-    """단일 프로세스 내 game_id → {(player_id, ws), ...} 매핑."""
+    """game_id → user_id → WebSocket. 동일 user 재접속 시 이전 WS 교체."""
 
     def __init__(self) -> None:
-        self._conns: dict[str, set[tuple[str, WebSocket]]] = defaultdict(set)
+        self._conns: dict[str, dict[str, WebSocket]] = defaultdict(dict)
 
-    async def connect(self, game_id: str, player_id: str, ws: WebSocket) -> None:
+    async def connect(self, game_id: str, user_id: str, ws: WebSocket) -> None:
         await ws.accept()
-        self._conns[game_id].add((player_id, ws))
-
-    def disconnect(self, game_id: str, player_id: str, ws: WebSocket) -> None:
-        self._conns[game_id].discard((player_id, ws))
-        if not self._conns[game_id]:
-            del self._conns[game_id]
-
-    async def broadcast(self, game_id: str, state: GameState) -> None:
-        """각 구독자에게 본인 perspective로 직렬화한 상태 전송."""
-        dead: list[tuple[str, WebSocket]] = []
-        for player_id, ws in list(self._conns.get(game_id, set())):
+        prev = self._conns[game_id].get(user_id)
+        if prev is not None and prev is not ws:
             try:
-                payload = serialize_state(state, viewer_id=player_id).model_dump()
+                await prev.close(code=1000, reason="replaced by new connection")
+            except Exception:
+                pass
+        self._conns[game_id][user_id] = ws
+
+    def disconnect(self, game_id: str, user_id: str, ws: WebSocket) -> None:
+        # 이미 교체된 경우(다른 WS가 등록됨)는 건드리지 않음
+        if self._conns.get(game_id, {}).get(user_id) is ws:
+            del self._conns[game_id][user_id]
+            if not self._conns[game_id]:
+                del self._conns[game_id]
+
+    async def broadcast(
+        self, game_id: str, state: GameState, display_names: dict[str, str]
+    ) -> None:
+        dead: list[tuple[str, WebSocket]] = []
+        for user_id, ws in list(self._conns.get(game_id, {}).items()):
+            try:
+                payload = serialize_state(
+                    state, viewer_id=user_id, display_names=display_names
+                ).model_dump()
                 await ws.send_json({"type": "state", "data": payload})
             except Exception as e:
-                logger.warning("WS send failed for %s: %s", player_id, e)
-                dead.append((player_id, ws))
-        for player_id, ws in dead:
-            self.disconnect(game_id, player_id, ws)
+                logger.warning("WS send failed for %s: %s", user_id, e)
+                dead.append((user_id, ws))
+        for user_id, ws in dead:
+            self.disconnect(game_id, user_id, ws)
 
 
 manager = ConnectionManager()
+
+
+def _make_sessionmaker() -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(get_engine(), expire_on_commit=False, autoflush=False)
+
+
+async def _auth_ws(token: str | None) -> uuid.UUID | None:
+    if not token:
+        return None
+    try:
+        claims = verify_access(token)
+    except InvalidTokenError:
+        return None
+    return claims.sub
 
 
 @router.websocket("/ws/games/{game_id}")
 async def game_socket(
     websocket: WebSocket,
     game_id: str,
-    player_id: Annotated[str, Query()],
-    redis: Annotated[Redis, Depends(get_redis)],
+    token: Annotated[str | None, Query()] = None,
+    redis: Annotated[Redis, Depends(get_redis)] = None,
 ) -> None:
-    svc = GameService(GameRepository(redis, ttl_seconds=settings.game_ttl_seconds))
-    await manager.connect(game_id, player_id, websocket)
+    user_id = await _auth_ws(token)
+    if user_id is None:
+        await websocket.close(code=4401, reason="unauthorized")
+        return
 
-    # 입장 시 현재 상태 즉시 전송
+    svc = GameService(GameRepository(redis, ttl_seconds=settings.game_ttl_seconds))
+
+    # 게임 존재 + 본인이 player인지 검증
     try:
         state = await svc.get_state(game_id)
-        payload = serialize_state(state, viewer_id=player_id).model_dump()
-        await websocket.send_json({"type": "state", "data": payload})
     except GameNotFoundError:
-        await websocket.send_json(
-            {"type": "error", "data": {"message": "game not found"}}
-        )
-        await websocket.close()
-        manager.disconnect(game_id, player_id, websocket)
+        await websocket.close(code=4404, reason="game not found")
         return
+    user_id_str = str(user_id)
+    if not any(p.player_id == user_id_str for p in state.players):
+        await websocket.close(code=4403, reason="not a player")
+        return
+
+    # DB에서 닉네임 매핑 확보
+    sm = _make_sessionmaker()
+    async with sm() as session:
+        # user_id가 DB에 실제 존재해야 보안상 안전
+        if await users_repo.get_by_id(session, user_id) is None:
+            await websocket.close(code=4401, reason="user not found")
+            return
+        display_names = await load_display_names(session, state)
+
+    await manager.connect(game_id, user_id_str, websocket)
+
+    payload = serialize_state(
+        state, viewer_id=user_id_str, display_names=display_names
+    ).model_dump()
+    await websocket.send_json({"type": "state", "data": payload})
 
     try:
         while True:
             msg = await websocket.receive_json()
-            await _handle_action(svc, game_id, msg, websocket)
+            await _handle_action(
+                svc, game_id, user_id_str, msg, websocket, display_names
+            )
     except WebSocketDisconnect:
         pass
     finally:
-        manager.disconnect(game_id, player_id, websocket)
+        manager.disconnect(game_id, user_id_str, websocket)
 
 
 async def _handle_action(
-    svc: GameService, game_id: str, msg: dict, sender: WebSocket
+    svc: GameService,
+    game_id: str,
+    user_id_str: str,
+    msg: dict,
+    sender: WebSocket,
+    display_names: dict[str, str],
 ) -> None:
     action = msg.get("action")
+    # 모든 액션은 본인 명의로만 전송 가능. payload.player_id를 강제 user_id로 덮어쓴다.
+    msg = {**msg, "player_id": user_id_str}
     try:
         if action == "first_turn":
             req = FirstTurnMoveRequest.model_validate(msg)
@@ -125,13 +183,12 @@ async def _handle_action(
         await sender.send_json({"type": "error", "data": {"message": str(e)}})
         return
 
-    await manager.broadcast(game_id, state)
+    await manager.broadcast(game_id, state, display_names)
 
-    # 라운드가 종료되면 다음 라운드로 즉시 진행. 클라이언트는 표시 시점만 결정한다.
     if state.phase == Phase.DONE:
         try:
             advanced = await svc.advance_round(game_id)
         except (GameNotFoundError, GameLockError, ValueError) as e:
             logger.warning("auto-advance failed for %s: %s", game_id, e)
             return
-        await manager.broadcast(game_id, advanced)
+        await manager.broadcast(game_id, advanced, display_names)

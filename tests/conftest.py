@@ -7,6 +7,7 @@
 from collections.abc import AsyncIterator
 
 import asyncpg
+import fakeredis.aioredis
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.config import settings
 from app.core.db import Base, get_session
+from app.core.redis import get_redis
 from app.main import app
 from app.users import models as _users_models  # noqa: F401
 
@@ -76,14 +78,28 @@ async def db_session(db_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 
 
 @pytest_asyncio.fixture
-async def client(db_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
+async def fake_redis() -> AsyncIterator[fakeredis.aioredis.FakeRedis]:
+    redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    yield redis
+    await redis.aclose()
+
+
+@pytest_asyncio.fixture
+async def client(
+    db_engine: AsyncEngine,
+    fake_redis: fakeredis.aioredis.FakeRedis,
+) -> AsyncIterator[AsyncClient]:
     sm = async_sessionmaker(db_engine, expire_on_commit=False)
 
     async def _override_session() -> AsyncIterator[AsyncSession]:
         async with sm() as session:
             yield session
 
+    def _override_redis() -> fakeredis.aioredis.FakeRedis:
+        return fake_redis
+
     app.dependency_overrides[get_session] = _override_session
+    app.dependency_overrides[get_redis] = _override_redis
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
