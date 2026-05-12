@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type {
   BoardEvaluation,
   Card,
-  GameState,
   HandEvaluation,
+  Matchup,
   PlayerState,
-  WsClientMsg,
 } from "../api/types";
-import { OfcTable, type OfcSession } from "../components/OfcTable";
+import { CardView } from "../components/Card";
+import { PlayerBoard } from "../components/PlayerBoard";
+import { ResultModal } from "../components/ResultModal";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { evaluate, isFoulBoard } from "../lib/handEval";
 import {
@@ -21,15 +22,13 @@ import {
 import { headToHeadMatchup } from "../lib/scoring";
 import {
   type BubbleKey,
-  type NormalTurnScript,
-  type OpponentScript,
+  type PlayerScript,
   TUTORIAL_SCENARIOS,
   type TutorialScenario,
 } from "../lib/tutorialScenarios";
 
 const ME_ID = "self";
 const BOT_ID = "bot";
-const BOT_DELAY_MS = 900;
 
 interface Board {
   top: Card[];
@@ -37,151 +36,107 @@ interface Board {
   bottom: Card[];
 }
 
-interface TState {
-  phase: "first_turn" | "normal_turn" | "done";
-  turnIdx: number; // 1=first, 2..5=normal
-  currentPlayer: "self" | "bot";
-  myHand: Card[];
+const empty = (): Board => ({ top: [], middle: [], bottom: [] });
+
+// 어떤 step 인지 정의. 사용자가 '다음' 누르면 stepIdx + 1.
+type Step =
+  | { kind: "intro"; bubble: BubbleKey }
+  | { kind: "my_deal"; turn: number; bubble?: BubbleKey } // 사용자 hand 노출만
+  | { kind: "my_place"; turn: number } // 사용자 자동 배치 적용
+  | { kind: "opp"; turn: number; bubble?: BubbleKey } // 봇 자동 진행 (hand 분배 + 배치)
+  | { kind: "result"; bubble: BubbleKey };
+
+function buildSteps(): Step[] {
+  const steps: Step[] = [];
+  steps.push({ kind: "intro", bubble: "intro" });
+  steps.push({ kind: "my_deal", turn: 1, bubble: "first_turn_my" });
+  steps.push({ kind: "my_place", turn: 1 });
+  steps.push({ kind: "opp", turn: 1, bubble: "first_turn_opp_done" });
+  for (let t = 2; t <= 5; t++) {
+    steps.push({
+      kind: "my_deal",
+      turn: t,
+      bubble: t === 2 ? "normal_turn_my" : undefined,
+    });
+    steps.push({ kind: "my_place", turn: t });
+    steps.push({ kind: "opp", turn: t });
+  }
+  steps.push({ kind: "result", bubble: "result" });
+  return steps;
+}
+
+interface Derived {
   myBoard: Board;
+  myHand: Card[];
   myDiscarded: Card[];
-  myDeckIdx: number;
-  botBoard: Board;
-  botDiscarded: Card[];
-  botDeckIdx: number;
-  bubble: BubbleKey | null;
+  oppBoard: Board;
+  oppDiscarded: Card[];
+  isResult: boolean;
 }
 
-const emptyBoard = (): Board => ({ top: [], middle: [], bottom: [] });
-
-function initialState(): TState {
+function applyMyTurn(
+  board: Board,
+  discarded: Card[],
+  hand: Card[],
+  turnIdx: number,
+  script: PlayerScript,
+): { board: Board; discarded: Card[] } {
+  const next: Board = {
+    top: [...board.top],
+    middle: [...board.middle],
+    bottom: [...board.bottom],
+  };
+  if (turnIdx === 1) {
+    for (let i = 0; i < 5; i++) next[script.firstTurnPlacements[i]].push(hand[i]);
+    return { board: next, discarded };
+  }
+  const s = script.normalTurns[turnIdx - 2];
+  for (const p of s.placements) next[p.row].push(hand[p.handIdxInTurn]);
   return {
-    phase: "first_turn",
-    turnIdx: 1,
-    currentPlayer: "self",
-    myHand: [],
-    myBoard: emptyBoard(),
-    myDiscarded: [],
-    myDeckIdx: 0,
-    botBoard: emptyBoard(),
-    botDiscarded: [],
-    botDeckIdx: 0,
-    bubble: "intro",
+    board: next,
+    discarded: [...discarded, hand[s.discardHandIdxInTurn]],
   };
 }
 
-function dealMy(s: TState, scenario: TutorialScenario): TState {
-  const count = s.turnIdx === 1 ? 5 : 3;
-  return {
-    ...s,
-    myHand: scenario.myCards.slice(s.myDeckIdx, s.myDeckIdx + count),
-    myDeckIdx: s.myDeckIdx + count,
-  };
+function applyOppTurn(
+  board: Board,
+  discarded: Card[],
+  turnIdx: number,
+  script: PlayerScript,
+): { board: Board; discarded: Card[] } {
+  const offset = turnIdx === 1 ? 0 : 5 + (turnIdx - 2) * 3;
+  const count = turnIdx === 1 ? 5 : 3;
+  const hand = script.cards.slice(offset, offset + count);
+  return applyMyTurn(board, discarded, hand, turnIdx, script);
 }
 
-function applyMyAction(s: TState, msg: WsClientMsg): TState {
-  if (msg.action === "first_turn" || msg.action === "normal_turn") {
-    const placed: Board = {
-      top: [...s.myBoard.top, ...msg.placements.top],
-      middle: [...s.myBoard.middle, ...msg.placements.middle],
-      bottom: [...s.myBoard.bottom, ...msg.placements.bottom],
-    };
-    const discarded =
-      msg.action === "normal_turn"
-        ? [...s.myDiscarded, msg.discard]
-        : s.myDiscarded;
-    return {
-      ...s,
-      myBoard: placed,
-      myDiscarded: discarded,
-      myHand: [],
-      currentPlayer: "bot",
-    };
-  }
-  return s;
-}
-
-function applyBotAction(s: TState, opp: OpponentScript): TState {
-  // 봇이 자기 차례에 카드 받고 script대로 배치한다.
-  const count = s.turnIdx === 1 ? 5 : 3;
-  const hand = opp.cards.slice(s.botDeckIdx, s.botDeckIdx + count);
-  const newDeckIdx = s.botDeckIdx + count;
-  const board: Board = {
-    top: [...s.botBoard.top],
-    middle: [...s.botBoard.middle],
-    bottom: [...s.botBoard.bottom],
-  };
-  let discarded = s.botDiscarded;
-
-  if (s.turnIdx === 1) {
-    // first turn — 5장 모두 배치
-    for (let i = 0; i < 5; i++) {
-      board[opp.firstTurnPlacements[i]].push(hand[i]);
+function derive(steps: Step[], stepIdx: number, sc: TutorialScenario): Derived {
+  let myBoard = empty();
+  let myHand: Card[] = [];
+  let myDiscarded: Card[] = [];
+  let oppBoard = empty();
+  let oppDiscarded: Card[] = [];
+  let isResult = false;
+  for (let i = 0; i <= stepIdx && i < steps.length; i++) {
+    const s = steps[i];
+    if (s.kind === "my_deal") {
+      const offset = s.turn === 1 ? 0 : 5 + (s.turn - 2) * 3;
+      const count = s.turn === 1 ? 5 : 3;
+      myHand = sc.player.cards.slice(offset, offset + count);
+    } else if (s.kind === "my_place") {
+      const result = applyMyTurn(myBoard, myDiscarded, myHand, s.turn, sc.player);
+      myBoard = result.board;
+      myDiscarded = result.discarded;
+      myHand = [];
+    } else if (s.kind === "opp") {
+      const result = applyOppTurn(oppBoard, oppDiscarded, s.turn, sc.opponent);
+      oppBoard = result.board;
+      oppDiscarded = result.discarded;
+    } else if (s.kind === "result") {
+      isResult = true;
     }
-  } else {
-    const script: NormalTurnScript = opp.normalTurns[s.turnIdx - 2];
-    for (const p of script.placements) {
-      board[p.row].push(hand[p.handIdxInTurn]);
-    }
-    discarded = [...discarded, hand[script.discardHandIdxInTurn]];
   }
-
-  const next: TState = {
-    ...s,
-    botBoard: board,
-    botDiscarded: discarded,
-    botDeckIdx: newDeckIdx,
-    currentPlayer: "self",
-  };
-
-  if (s.turnIdx === 5) {
-    next.phase = "done";
-    next.bubble = "result";
-    return next;
-  }
-
-  // 다음 턴 진입
-  next.turnIdx = s.turnIdx + 1;
-  next.phase = "normal_turn";
-
-  if (s.turnIdx === 1) {
-    // first turn 끝 → 사용자 normal turn 시작 전 안내 bubble
-    // 사용자 hand는 bubble 닫을 때 deal
-    next.bubble = "first_turn_opp_done";
-  }
-  // 일반 normal turn — 사용자 hand deal은 호출자(botStep)가 처리
-  return next;
-}
-
-// 봇 액션 + 필요한 경우 사용자 다음 hand deal까지.
-function botStep(s: TState, scenario: TutorialScenario): TState {
-  const next = applyBotAction(s, scenario.opponent);
-  if (
-    next.phase === "normal_turn" &&
-    next.currentPlayer === "self" &&
-    next.bubble === null &&
-    next.myHand.length === 0
-  ) {
-    return dealMy(next, scenario);
-  }
-  return next;
-}
-
-function dismissBubble(s: TState, scenario: TutorialScenario): TState {
-  switch (s.bubble) {
-    case "intro":
-      // 사용자 first turn 5장 deal
-      return { ...dealMy(s, scenario), bubble: "first_turn_my" };
-    case "first_turn_my":
-      return { ...s, bubble: null };
-    case "first_turn_opp_done":
-      return { ...dealMy(s, scenario), bubble: "normal_turn_my" };
-    case "normal_turn_my":
-      return { ...s, bubble: null };
-    case "result":
-      return { ...s, bubble: null };
-    default:
-      return s;
-  }
+  return { myBoard, myHand, myDiscarded, oppBoard, oppDiscarded, isResult };
 }
 
 function rowEval(
@@ -212,104 +167,95 @@ function buildEvaluation(b: Board): BoardEvaluation {
   };
 }
 
-function toPlayer(
-  id: string,
-  board: Board,
-  hand: Card[],
-  showEval: boolean,
-  lastDelta: number | null,
-): PlayerState {
-  return {
-    player_id: id,
-    board: {
-      top: board.top,
-      middle: board.middle,
-      bottom: board.bottom,
-      top_count: board.top.length,
-      middle_count: board.middle.length,
-      bottom_count: board.bottom.length,
-    },
-    hand,
-    hand_count: hand.length,
-    score: lastDelta ?? 0,
-    is_fantasy: false,
-    next_fantasy_cards: null,
-    evaluation: showEval ? buildEvaluation(board) : null,
-    last_round_delta: lastDelta,
-  };
-}
-
-function buildGameState(s: TState, scenario: TutorialScenario): GameState {
-  const showResult = s.phase === "done";
-  const matchups = showResult
-    ? [headToHeadMatchup(ME_ID, BOT_ID, s.myBoard, s.botBoard)]
-    : null;
-  const myDelta = matchups ? matchups[0].total_a : null;
-  const botDelta = matchups ? -matchups[0].total_a : null;
-  const me = toPlayer(ME_ID, s.myBoard, s.myHand, showResult, myDelta);
-  const bot = toPlayer(BOT_ID, s.botBoard, [], showResult, botDelta);
-  return {
-    game_id: "tutorial",
-    phase: s.phase,
-    dealer_idx: 1, // 봇이 dealer라 첫 turn current = self
-    current_player_idx: s.currentPlayer === "self" ? 0 : 1,
-    current_player_id: s.currentPlayer === "self" ? ME_ID : BOT_ID,
-    round_number: 1,
-    is_bonus_round: false,
-    max_rounds: 0,
-    is_game_over: false,
-    players: [me, bot],
-    matchups,
-    players_meta: { [ME_ID]: "나", [BOT_ID]: scenario.opponent.nickname },
-  };
-}
-
 export function Tutorial() {
   const navigate = useNavigate();
   const [scenarioIdx] = useState(0);
   const scenario = TUTORIAL_SCENARIOS[scenarioIdx];
-  const [s, setS] = useState<TState>(initialState);
+  const steps = useMemo(() => buildSteps(), []);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // 봇 차례면 일정 시간 뒤 자동 진행
-  useEffect(() => {
-    if (s.currentPlayer !== "bot") return;
-    if (s.bubble !== null) return;
-    const t = setTimeout(() => {
-      setS((prev) => botStep(prev, scenario));
-    }, BOT_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [s.currentPlayer, s.bubble, scenario]);
-
-  const gameState = useMemo(() => buildGameState(s, scenario), [s, scenario]);
-
-  const session: OfcSession = useMemo(
-    () => ({
-      gameState,
-      myPlayerId: ME_ID,
-      connected: true,
-      confirm: (msg) => setS((prev) => applyMyAction(prev, msg)),
-      resultClose: () => {
-        toast.success("튜토리얼 완료!");
-        navigate("/");
-      },
-    }),
-    [gameState, navigate],
+  const d = useMemo(
+    () => derive(steps, stepIdx, scenario),
+    [steps, stepIdx, scenario],
   );
+  const currentStep = steps[stepIdx];
+  const bubbleKey =
+    currentStep && "bubble" in currentStep ? currentStep.bubble : undefined;
+  const bubbleText = bubbleKey ? scenario.bubbles[bubbleKey] : undefined;
 
-  const bubbleText = s.bubble ? scenario.bubbles[s.bubble] : null;
-  // step 번호 (UX용): intro=1, first_turn_my=2, ...result=5
-  const bubbleStepMap: Record<BubbleKey, number> = {
+  const isLastStep = stepIdx >= steps.length - 1;
+
+  // mock PlayerState
+  const matchup: Matchup | null = d.isResult
+    ? headToHeadMatchup(ME_ID, BOT_ID, d.myBoard, d.oppBoard)
+    : null;
+  const myDelta = matchup ? matchup.total_a : null;
+  const oppDelta = matchup ? -matchup.total_a : null;
+  const me: PlayerState = {
+    player_id: ME_ID,
+    board: {
+      top: d.myBoard.top,
+      middle: d.myBoard.middle,
+      bottom: d.myBoard.bottom,
+      top_count: d.myBoard.top.length,
+      middle_count: d.myBoard.middle.length,
+      bottom_count: d.myBoard.bottom.length,
+    },
+    hand: [],
+    hand_count: 0,
+    score: myDelta ?? 0,
+    is_fantasy: false,
+    next_fantasy_cards: null,
+    evaluation: d.isResult ? buildEvaluation(d.myBoard) : null,
+    last_round_delta: myDelta,
+  };
+  const opp: PlayerState = {
+    player_id: BOT_ID,
+    board: {
+      top: d.oppBoard.top,
+      middle: d.oppBoard.middle,
+      bottom: d.oppBoard.bottom,
+      top_count: d.oppBoard.top.length,
+      middle_count: d.oppBoard.middle.length,
+      bottom_count: d.oppBoard.bottom.length,
+    },
+    hand: [],
+    hand_count: 0,
+    score: oppDelta ?? 0,
+    is_fantasy: false,
+    next_fantasy_cards: null,
+    evaluation: d.isResult ? buildEvaluation(d.oppBoard) : null,
+    last_round_delta: oppDelta,
+  };
+
+  const next = () => {
+    if (stepIdx < steps.length - 1) {
+      setStepIdx(stepIdx + 1);
+    } else {
+      setModalOpen(true);
+    }
+  };
+
+  const handleResultClose = () => {
+    setModalOpen(false);
+    toast.success("튜토리얼 완료!");
+    navigate("/");
+  };
+
+  const skip = () => {
+    if (confirm("튜토리얼을 건너뛰시겠습니까?")) navigate("/");
+  };
+
+  const totalSteps = 5; // bubble 표시되는 핵심 step 수
+  const visibleBubbleStepNo: Record<BubbleKey, number> = {
     intro: 1,
     first_turn_my: 2,
     first_turn_opp_done: 3,
     normal_turn_my: 4,
     result: 5,
   };
-  const stepNo = s.bubble ? bubbleStepMap[s.bubble] : 0;
-
-  const handleSkip = () => {
-    if (confirm("튜토리얼을 건너뛰시겠습니까?")) navigate("/");
-  };
+  const stepNo = bubbleKey ? visibleBubbleStepNo[bubbleKey] : 0;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
@@ -324,23 +270,127 @@ export function Tutorial() {
         <div className="text-sm font-semibold">{scenario.title}</div>
         <button
           type="button"
-          onClick={handleSkip}
+          onClick={skip}
           className="text-xs text-slate-500 hover:underline"
         >
           건너뛰기
         </button>
       </header>
 
-      <OfcTable session={session} />
+      {/* 내 손패 (현재 turn 카드) */}
+      <section className="flex flex-col items-center gap-1 min-h-[6rem]">
+        {d.myHand.length > 0 ? (
+          <>
+            <div className="text-xs text-slate-500">내 카드</div>
+            <div className="flex gap-1">
+              {d.myHand.map((c, i) => (
+                <CardView key={`mh-${i}-${c.rank}-${c.suit}`} card={c} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-slate-400">
+            {d.isResult
+              ? "라운드 종료"
+              : currentStep && currentStep.kind === "intro"
+                ? "튜토리얼 시작"
+                : "다음 단계로 진행..."}
+          </div>
+        )}
+      </section>
 
-      {bubbleText && (
+      {/* 보드 두 개 — 봇 위, 사용자 아래 */}
+      <main className="flex flex-col items-center gap-3">
+        <div className="w-full max-w-md">
+          <PlayerBoard
+            player={opp}
+            label={scenario.opponent.nickname}
+            isMe={false}
+            isCurrent={false}
+            isDealer={false}
+          />
+        </div>
+        <div className="text-xs text-slate-400">vs</div>
+        <div className="w-full max-w-md">
+          <PlayerBoard
+            player={me}
+            label="나"
+            isMe={true}
+            isCurrent={!d.isResult}
+            isDealer={false}
+          />
+        </div>
+
+        {d.myDiscarded.length > 0 && (
+          <div className="w-full max-w-md bg-white rounded-lg shadow p-3">
+            <div className="text-xs text-slate-500 mb-1">
+              내가 버린 카드 / 봇이 버린 카드
+            </div>
+            <div className="flex flex-wrap justify-center gap-1">
+              {d.myDiscarded.map((c, i) => (
+                <CardView
+                  key={`md-${i}-${c.rank}-${c.suit}`}
+                  card={c}
+                  size="sm"
+                  faded
+                />
+              ))}
+              <span className="w-2" />
+              {d.oppDiscarded.map((c, i) => (
+                <CardView
+                  key={`od-${i}-${c.rank}-${c.suit}`}
+                  card={c}
+                  size="sm"
+                  faded
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* bubble or 진행 버튼 */}
+      {bubbleText ? (
         <TutorialOverlay
           text={bubbleText}
           step={stepNo}
-          totalSteps={5}
-          onNext={() => setS((prev) => dismissBubble(prev, scenario))}
-          onSkip={handleSkip}
-          ctaLabel={s.bubble === "result" ? "결과 보기" : "다음"}
+          totalSteps={totalSteps}
+          onNext={next}
+          onSkip={skip}
+          ctaLabel={
+            bubbleKey === "result"
+              ? "결과 보기"
+              : isLastStep
+                ? "튜토리얼 완료"
+                : "다음"
+          }
+        />
+      ) : (
+        // 진행만 하는 step — 화면 하단에 작은 "다음" 버튼
+        !modalOpen && (
+          <div className="fixed inset-x-0 bottom-12 z-30 flex justify-center pointer-events-none">
+            <button
+              type="button"
+              onClick={next}
+              className="pointer-events-auto px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-lg"
+            >
+              다음 →
+            </button>
+          </div>
+        )
+      )}
+
+      {modalOpen && matchup && (
+        <ResultModal
+          players={[me, opp]}
+          matchups={[matchup]}
+          myPlayerId={ME_ID}
+          playersMeta={{ [ME_ID]: "나", [BOT_ID]: scenario.opponent.nickname }}
+          roundNumber={1}
+          maxRounds={0}
+          isBonusRound={false}
+          isGameOver={false}
+          onClose={handleResultClose}
         />
       )}
     </div>
