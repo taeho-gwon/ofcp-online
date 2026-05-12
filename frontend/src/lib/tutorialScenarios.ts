@@ -508,7 +508,7 @@ export const SCENARIO_FL_PROGRESS: FantasyScenario = {
 
 export const TUTORIAL_SCENARIOS: TutorialScenario[] = [
   SCENARIO_BASICS,
-  SCENARIO_FANTASY,
   SCENARIO_FOUL,
+  SCENARIO_FANTASY,
   SCENARIO_FL_PROGRESS,
 ];
