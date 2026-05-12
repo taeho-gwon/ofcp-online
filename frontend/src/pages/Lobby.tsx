@@ -141,6 +141,13 @@ export function Lobby() {
         </section>
 
         <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/tutorial")}
+            className="px-3 py-2 rounded bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 text-sm font-semibold"
+          >
+            ★ 튜토리얼 — 처음이라면 여기부터
+          </button>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <button
               type="button"
