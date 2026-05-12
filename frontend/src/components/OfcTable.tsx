@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Card, GameState, PlayerState, Row, WsClientMsg } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
@@ -64,20 +64,18 @@ export function OfcTable({ session }: Props) {
   const [animationDone, setAnimationDone] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // phase 변경(예: normal_turn → done, done → first_turn) 시 pending/모달 초기화.
-  const prevPhaseRef = useRef<GameState["phase"] | null>(null);
+  // 새 state(턴 진행 / 라운드 진행 / 다른 사람 액션 결과)가 도착하면 pending 인터랙션 초기화.
+  // gameState ref가 바뀔 때만 트리거 — 연습/게임 모두 같은 동작.
   useEffect(() => {
-    const phase = gameState?.phase ?? null;
-    if (phase === prevPhaseRef.current) return;
-    prevPhaseRef.current = phase;
     setSelectedRow(null);
     setSelectedCardIdx(null);
     setPlaced([]);
+    const phase = gameState?.phase;
     if (phase && phase !== "done" && phase !== "game_over") {
       setAnimationDone(false);
       setModalOpen(false);
     }
-  }, [gameState?.phase]);
+  }, [gameState]);
 
   const me = useMemo(
     () => gameState?.players.find((p) => p.player_id === myPlayerId) ?? null,
