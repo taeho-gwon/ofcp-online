@@ -2,22 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { GameSocket } from "../api/ws";
-import type { Card, PlayerState, Row, WsClientMsg } from "../api/types";
-import { ROW_CAPACITY } from "../api/types";
+import { OfcTable, type OfcSession } from "../components/OfcTable";
+import { RulesModal } from "../components/RulesModal";
 import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
-import { Hand } from "../components/Hand";
-import { PlayerBoard } from "../components/PlayerBoard";
-import {
-  ActionBar,
-  getRequiredDiscard,
-  getRequiredPlace,
-} from "../components/ActionBar";
-import { useMatchupAnimation } from "../components/useMatchupAnimation";
-import { ResultModal } from "../components/ResultModal";
-import { RulesModal } from "../components/RulesModal";
-import { isFoulBoard } from "../lib/handEval";
-import { displayName } from "../lib/displayName";
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -28,22 +16,12 @@ export function Game() {
 
   const gameState = useGameStore((s) => s.gameState);
   const connected = useGameStore((s) => s.connected);
-  const selectedRow = useGameStore((s) => s.selectedRow);
-  const placed = useGameStore((s) => s.placed);
   const setGameState = useGameStore((s) => s.setGameState);
   const commitPendingState = useGameStore((s) => s.commitPendingState);
   const setConnected = useGameStore((s) => s.setConnected);
   const setError = useGameStore((s) => s.setError);
-  const selectRow = useGameStore((s) => s.selectRow);
-  const selectCard = useGameStore((s) => s.selectCard);
-  const selectedCardIdx = useGameStore((s) => s.selectedCardIdx);
-  const commitPlacement = useGameStore((s) => s.commitPlacement);
-  const unplace = useGameStore((s) => s.unplace);
-  const clearPending = useGameStore((s) => s.clearPending);
 
   const socketRef = useRef<GameSocket | null>(null);
-  const [animationDone, setAnimationDone] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
@@ -67,169 +45,17 @@ export function Game() {
     };
   }, [gameId, accessToken, setConnected, setGameState, setError]);
 
-  const handleAnimationDone = () => {
-    setAnimationDone(true);
-    setModalOpen(true);
-  };
-
-  // 결과 phase 동안 gameState는 스토어에 의해 결과 시점에 고정 유지된다(다음 라운드
-  // state는 pendingState로 보류됨). matchups가 있으면 그대로 애니메이션을 돌린다.
-  const inResultPhase =
-    gameState?.phase === "done" || gameState?.phase === "game_over";
-
-  const anim = useMatchupAnimation(
-    inResultPhase && !animationDone ? (gameState?.matchups ?? null) : null,
-    handleAnimationDone,
+  const session: OfcSession = useMemo(
+    () => ({
+      gameState,
+      myPlayerId: playerId,
+      connected,
+      confirm: (msg) => socketRef.current?.send(msg),
+      resultClose: () => commitPendingState(),
+      newRoom: () => navigate("/"),
+    }),
+    [gameState, playerId, connected, commitPendingState, navigate],
   );
-
-  const me = useMemo(
-    () => gameState?.players.find((p) => p.player_id === playerId) ?? null,
-    [gameState, playerId],
-  );
-
-  const isFantasyPhase = gameState?.phase === "fantasy_turn";
-  const isBoardComplete = (p: PlayerState): boolean =>
-    p.board.top_count + p.board.middle_count + p.board.bottom_count >= 13;
-  const myFlIncomplete =
-    !!me && me.is_fantasy && !isBoardComplete(me);
-  const isMyTurn =
-    !!gameState &&
-    (isFantasyPhase
-      ? myFlIncomplete
-      : gameState.current_player_id === playerId);
-  const handCount = me?.hand.length ?? 0;
-
-  const pendingFlPlayers = useMemo(() => {
-    if (!gameState || !isFantasyPhase) return [];
-    return gameState.players.filter(
-      (p) => p.is_fantasy && !isBoardComplete(p),
-    );
-  }, [gameState, isFantasyPhase]);
-
-  const placedIdxSet = useMemo(
-    () => new Set(placed.map((p) => p.handIdx)),
-    [placed],
-  );
-
-  const pendingByRow = useMemo(() => {
-    const out: Record<Row, { card: Card; handIdx: number }[]> = {
-      top: [],
-      middle: [],
-      bottom: [],
-    };
-    if (!me) return out;
-    for (const slot of placed) {
-      const card = me.hand[slot.handIdx];
-      if (card) out[slot.row].push({ card, handIdx: slot.handIdx });
-    }
-    return out;
-  }, [placed, me]);
-
-  const rowUsed = (row: Row): number => {
-    if (!me) return 0;
-    return me.board[row].length + pendingByRow[row].length;
-  };
-
-  const handleRowSelect = (row: Row) => {
-    if (!isMyTurn) return;
-    // 카드 먼저 선택돼 있으면 그 카드를 이 줄에 배치.
-    if (selectedCardIdx !== null) {
-      if (rowUsed(row) >= ROW_CAPACITY[row]) {
-        toast.error(`${row} 줄이 가득 찼습니다.`);
-        return;
-      }
-      commitPlacement(selectedCardIdx, row);
-      return;
-    }
-    selectRow(selectedRow === row ? null : row);
-  };
-
-  const handleHandPlace = (idx: number) => {
-    if (!isMyTurn) return;
-    // 줄이 먼저 선택돼 있으면 이 카드를 그 줄에 배치.
-    if (selectedRow !== null) {
-      if (rowUsed(selectedRow) >= ROW_CAPACITY[selectedRow]) {
-        toast.error(`${selectedRow} 줄이 가득 찼습니다.`);
-        return;
-      }
-      commitPlacement(idx, selectedRow);
-      return;
-    }
-    // 둘 다 선택 전 → 카드 선택/해제 토글.
-    selectCard(selectedCardIdx === idx ? null : idx);
-  };
-
-  const handlePendingClick = (handIdx: number) => {
-    unplace(handIdx);
-  };
-
-  const handleConfirm = () => {
-    if (!gameState || !me) return;
-    if (!isMyTurn) return;
-
-    const phase = gameState.phase;
-    const placeReq = getRequiredPlace(phase);
-    const discardReq = getRequiredDiscard(phase, handCount);
-
-    if (placed.length !== placeReq) {
-      toast.error(`${placeReq}장을 배치해야 합니다. (현재 ${placed.length}장)`);
-      return;
-    }
-
-    const placements: Record<Row, Card[]> = { top: [], middle: [], bottom: [] };
-    for (const slot of placed) {
-      const c = me.hand[slot.handIdx];
-      if (c) placements[slot.row].push(c);
-    }
-
-    const missingIdx = me.hand
-      .map((_, i) => i)
-      .filter((i) => !placedIdxSet.has(i));
-    const missing = missingIdx.map((i) => me.hand[i]);
-
-    if (missing.length !== discardReq) {
-      toast.error(
-        `버려질 카드 수가 맞지 않습니다. (예상 ${discardReq}, 실제 ${missing.length})`,
-      );
-      return;
-    }
-
-    let msg: WsClientMsg;
-    if (phase === "first_turn") {
-      msg = { action: "first_turn", player_id: playerId, placements };
-    } else if (phase === "normal_turn") {
-      msg = {
-        action: "normal_turn",
-        player_id: playerId,
-        placements,
-        discard: missing[0],
-      };
-    } else if (phase === "fantasy_turn") {
-      if (
-        isFoulBoard(placements.top, placements.middle, placements.bottom)
-      ) {
-        toast.error("Foul 보드입니다. 탑 ≤ 미들 ≤ 바텀이 되도록 다시 배치하세요.");
-        return;
-      }
-      msg = {
-        action: "fantasy_turn",
-        player_id: playerId,
-        placements,
-        discards: missing,
-      };
-    } else {
-      return;
-    }
-
-    socketRef.current?.send(msg);
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setAnimationDone(false);
-    // 보류된 다음 라운드 state가 있으면 이제 적용. 없으면(GAME_OVER 등) 그대로.
-    commitPendingState();
-  };
 
   if (!gameId || !playerId) {
     return (
@@ -238,7 +64,6 @@ export function Game() {
       </div>
     );
   }
-  const playersMeta = gameState?.players_meta;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
@@ -290,112 +115,12 @@ export function Game() {
             룰
           </button>
         </div>
-        <div className="text-sm text-slate-700">
-          {gameState ? (
-            gameState.is_game_over ? (
-              <span className="text-slate-500">종료</span>
-            ) : isFantasyPhase ? (
-              <>
-                <span className="font-semibold">FantasyLand 배치 중</span>
-                <span className="text-slate-400 ml-1">
-                  ({pendingFlPlayers.length}명 대기)
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">
-                  {displayName(gameState.current_player_id, playersMeta)}
-                </span>
-                <span className="text-slate-400 ml-1">의 차례</span>
-              </>
-            )
-          ) : (
-            "로딩..."
-          )}
-        </div>
+        <span className="w-16" />
       </header>
 
-      {gameState && (
-        <section className="flex justify-center">
-          <ActionBar
-            phase={gameState.phase}
-            isMyTurn={isMyTurn}
-            hasPending={
-              placed.length > 0 ||
-              selectedRow !== null ||
-              selectedCardIdx !== null
-            }
-            onConfirm={handleConfirm}
-            onCancel={clearPending}
-            onShowResult={
-              inResultPhase && animationDone
-                ? () => setModalOpen(true)
-                : undefined
-            }
-          />
-        </section>
-      )}
-
-      {me && (
-        <section className="flex justify-center">
-          <Hand
-            hand={me.hand}
-            placedIdxSet={placedIdxSet}
-            enabled={isMyTurn}
-            selectedIdx={selectedCardIdx}
-            onPlace={handleHandPlace}
-            onUnplace={unplace}
-          />
-        </section>
-      )}
-
-      <main className="flex-1 flex items-start justify-center">
-        {!gameState ? (
-          <div className="text-slate-400">게임 상태를 불러오는 중...</div>
-        ) : (
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${gameState.players.length}, minmax(0, 1fr))` }}>
-            {gameState.players.map((p, idx) => {
-              const isMe = p.player_id === playerId;
-              return (
-                <PlayerBoard
-                  key={p.player_id}
-                  player={p}
-                  label={displayName(p.player_id, playersMeta)}
-                  isMe={isMe}
-                  isCurrent={
-                    isFantasyPhase
-                      ? p.is_fantasy && !isBoardComplete(p)
-                      : p.player_id === gameState.current_player_id
-                  }
-                  isDealer={idx === gameState.dealer_idx}
-                  pendingByRow={isMe ? pendingByRow : undefined}
-                  selectedRow={isMe ? selectedRow : undefined}
-                  onRowSelect={isMe && isMyTurn ? handleRowSelect : undefined}
-                  onPendingClick={isMe ? handlePendingClick : undefined}
-                  animOverlay={anim.overlaysByPlayer[p.player_id] ?? null}
-                />
-              );
-            })}
-          </div>
-        )}
-      </main>
+      <OfcTable session={session} />
 
       {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} />}
-
-      {modalOpen && gameState && gameState.matchups && (
-        <ResultModal
-          players={gameState.players}
-          matchups={gameState.matchups}
-          myPlayerId={playerId}
-          playersMeta={playersMeta}
-          roundNumber={gameState.round_number}
-          maxRounds={gameState.max_rounds}
-          isBonusRound={gameState.is_bonus_round}
-          isGameOver={gameState.is_game_over}
-          onClose={handleCloseModal}
-          onNewRoom={() => navigate("/")}
-        />
-      )}
     </div>
   );
 }
