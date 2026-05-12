@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type {
   BoardEvaluation,
@@ -12,7 +12,7 @@ import { CardView } from "../components/Card";
 import { PlayerBoard } from "../components/PlayerBoard";
 import { ResultModal } from "../components/ResultModal";
 import { TutorialOverlay } from "../components/TutorialOverlay";
-import { evaluate, isFoulBoard } from "../lib/handEval";
+import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
   handLabel,
   royaltyBottom,
@@ -153,6 +153,19 @@ function rowEval(
   };
 }
 
+function fantasyEntryCards(top: Card[]): number | null {
+  if (top.length !== 3) return null;
+  const hv = evaluate(top);
+  if (hv.rank === HandRank.THREE_OF_A_KIND) return 17;
+  if (hv.rank === HandRank.ONE_PAIR) {
+    const high = hv.tiebreakers[0];
+    if (high === 14) return 16;
+    if (high === 13) return 15;
+    if (high === 12) return 14;
+  }
+  return null;
+}
+
 function buildEvaluation(b: Board): BoardEvaluation {
   const foul = isFoulBoard(b.top, b.middle, b.bottom);
   const top = rowEval(b.top, foul, royaltyTop);
@@ -169,8 +182,9 @@ function buildEvaluation(b: Board): BoardEvaluation {
 
 export function Tutorial() {
   const navigate = useNavigate();
-  const [scenarioIdx] = useState(0);
-  const scenario = TUTORIAL_SCENARIOS[scenarioIdx];
+  const { scenarioId } = useParams<{ scenarioId: string }>();
+  const scenario =
+    TUTORIAL_SCENARIOS.find((s) => s.id === scenarioId) ?? TUTORIAL_SCENARIOS[0];
   const steps = useMemo(() => buildSteps(), []);
   const [stepIdx, setStepIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -192,6 +206,11 @@ export function Tutorial() {
     : null;
   const myDelta = matchup ? matchup.total_a : null;
   const oppDelta = matchup ? -matchup.total_a : null;
+  const myFoul = d.isResult
+    ? isFoulBoard(d.myBoard.top, d.myBoard.middle, d.myBoard.bottom)
+    : false;
+  const myFlCards =
+    d.isResult && !myFoul ? fantasyEntryCards(d.myBoard.top) : null;
   const me: PlayerState = {
     player_id: ME_ID,
     board: {
@@ -206,7 +225,7 @@ export function Tutorial() {
     hand_count: 0,
     score: myDelta ?? 0,
     is_fantasy: false,
-    next_fantasy_cards: null,
+    next_fantasy_cards: myFlCards,
     evaluation: d.isResult ? buildEvaluation(d.myBoard) : null,
     last_round_delta: myDelta,
   };

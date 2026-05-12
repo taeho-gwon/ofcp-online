@@ -162,4 +162,253 @@ export const SCENARIO_BASICS: TutorialScenario = {
   },
 };
 
-export const TUTORIAL_SCENARIOS: TutorialScenario[] = [SCENARIO_BASICS];
+// ── 시나리오 2: FantasyLand 진입 — top에 QQ+ 페어 ───────────────────────────
+//
+// 의도 최종 보드(사용자):
+//   top:    Q♦ Q♠ 4♠       — Q 페어 (Royalty +7, FantasyLand 자격 14장)
+//   middle: 8♣ 8♦ 8♥ K♣ 2♣ — 8 트리플 (Royalty +2)
+//   bottom: A♥ K♥ J♥ T♥ 7♥ — ♥ 플러시 (Royalty +4)
+//                            합계 Royalty +13
+//
+// 학습 포인트: top에 QQ 이상 페어를 만들면 **다음 라운드에 14장+를 한 번에**
+// 받는 FantasyLand에 진입한다. KK는 15장, AA는 16장, 트립스(222 등)는 17장.
+export const SCENARIO_FANTASY: TutorialScenario = {
+  id: "fantasy",
+  title: "FantasyLand 진입",
+  outro:
+    "top에 QQ 이상 페어를 만들면 다음 라운드 14장+를 한 번에 받는 FantasyLand에 진입합니다. KK=15장, AA=16장, 트립스=17장.",
+  player: {
+    cards: [
+      // first 5: Q♦ 8♣ 8♦ A♥ K♥
+      C(12, 2), C(8, 1), C(8, 2), C(14, 3), C(13, 3),
+      // normal 2: J♥ 8♥ 9♦ (9♦ 버림)
+      C(11, 3), C(8, 3), C(9, 2),
+      // normal 3: T♥ K♣ 2♠ (2♠ 버림)
+      C(10, 3), C(13, 1), C(2, 4),
+      // normal 4: 7♥ 2♣ 3♦ (3♦ 버림)
+      C(7, 3), C(2, 1), C(3, 2),
+      // normal 5: Q♠ 4♠ 2♦ (2♦ 버림)
+      C(12, 4), C(4, 4), C(2, 2),
+    ],
+    // Q♦→top, 8♣ 8♦→middle, A♥ K♥→bottom
+    firstTurnPlacements: ["top", "middle", "middle", "bottom", "bottom"],
+    normalTurns: [
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      // turn 5: Q♠→top(Q 페어 완성 → FL!), 4♠→top, 2♦ 버림
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "top" },
+          { handIdxInTurn: 1, row: "top" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+    ],
+  },
+  opponent: {
+    nickname: "튜토리얼 봇",
+    cards: [
+      // first 5: 9♣ 5♣ 5♠ 6♦ 7♦
+      C(9, 1), C(5, 1), C(5, 4), C(6, 2), C(7, 2),
+      // normal 2: 8♠ 6♣ 3♠ (3♠ 버림)
+      C(8, 4), C(6, 1), C(3, 4),
+      // normal 3: J♣ 5♦ 7♣ (7♣ 버림)
+      C(11, 1), C(5, 2), C(7, 1),
+      // normal 4: 5♥ 4♥ 4♣ (4♣ 버림)
+      C(5, 3), C(4, 3), C(4, 1),
+      // normal 5: 2♥ 3♥ 6♥ (6♥ 버림)
+      C(2, 3), C(3, 3), C(6, 3),
+    ],
+    firstTurnPlacements: ["top", "middle", "middle", "bottom", "bottom"],
+    normalTurns: [
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "middle" },
+          { handIdxInTurn: 1, row: "top" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "middle" },
+          { handIdxInTurn: 1, row: "bottom" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "top" },
+          { handIdxInTurn: 1, row: "bottom" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "middle" },
+          { handIdxInTurn: 1, row: "bottom" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+    ],
+  },
+  bubbles: {
+    intro:
+      "이번 시나리오는 **FantasyLand(FL) 진입**. top에 QQ 이상 페어를 만들면 다음 라운드 14장을 한 번에 받습니다.",
+    first_turn_my:
+      "첫 5장. Q♦은 top FL 시드, 8♣·8♦은 middle 트리플 시드, A♥·K♥은 bottom 플러시 시드. 한 번에 세 라인을 다 노리는 분배입니다.",
+    first_turn_opp_done:
+      "봇은 평범하게 페어/스트레이트 시드로 시작했습니다.",
+    normal_turn_my:
+      "normal turn에서 ♥는 bottom, 8♥은 middle 트리플 완성으로, 무의미한 작은 카드는 버립니다. top 자리(Q 페어용)는 마지막에 채울 예정입니다.",
+    result:
+      "점수 계산 — 라인 +3, 스쿱 +3, Royalty +11(사용자 13 − 봇 2) = 총 +17. 그리고 top에 Q 페어를 만들었으니 **다음 라운드 FantasyLand 14장**을 받습니다!",
+  },
+};
+
+// ── 시나리오 3: Foul — top에 페어 둘 때 middle도 강해야 ─────────────────────
+//
+// 의도 최종 보드(사용자) — 학습용 *Foul* 사례:
+//   top:    K♠ K♣ 5♠       — K 페어 (강함, rank 2)
+//   middle: 2♣ 4♦ 7♥ 9♠ J♥ — high card J (약함, rank 1)
+//   bottom: A♥ K♥ Q♥ T♥ 8♥ — ♥ 플러시 (강함, rank 6)
+//
+// middle(high card) < top(K pair) → FOUL. 라인 모두 자동 패배 + Royalty 0.
+export const SCENARIO_FOUL: TutorialScenario = {
+  id: "foul",
+  title: "Foul — 피해야 하는 함정",
+  outro:
+    "top에 큰 페어를 두면 middle도 그보다 강한 핸드여야 합니다. K 페어를 top에 두려면 middle은 최소 K 페어 이상이 되어야 하는데, 그게 안 되면 K를 middle/bottom으로 보내는 게 안전합니다.",
+  player: {
+    cards: [
+      // first 5: K♠ 2♣ 4♦ A♥ K♥
+      C(13, 4), C(2, 1), C(4, 2), C(14, 3), C(13, 3),
+      // normal 2: K♣ 7♥ 9♦ (9♦ 버림)
+      C(13, 1), C(7, 3), C(9, 2),
+      // normal 3: Q♥ 9♠ 3♠ (3♠ 버림)
+      C(12, 3), C(9, 4), C(3, 4),
+      // normal 4: T♥ J♥ 2♠ (2♠ 버림)
+      C(10, 3), C(11, 3), C(2, 4),
+      // normal 5: 8♥ 5♠ 6♦ (6♦ 버림)
+      C(8, 3), C(5, 4), C(6, 2),
+    ],
+    // K♠→top, 2♣→middle, 4♦→middle, A♥ K♥→bottom
+    firstTurnPlacements: ["top", "middle", "middle", "bottom", "bottom"],
+    normalTurns: [
+      // turn 2 (K♣ 7♥ 9♦): K♣→top, 7♥→middle, 9♦ 버림
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "top" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      // turn 3 (Q♥ 9♠ 3♠): Q♥→bottom, 9♠→middle, 3♠ 버림
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      // turn 4 (T♥ J♥ 2♠): T♥→bottom, J♥→middle, 2♠ 버림
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      // turn 5 (8♥ 5♠ 6♦): 8♥→bottom(flush 완성), 5♠→top, 6♦ 버림
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "top" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+    ],
+  },
+  opponent: {
+    nickname: "튜토리얼 봇",
+    cards: [
+      // first 5: 9♣ 3♥ 4♥ 6♠ 7♠
+      C(9, 1), C(3, 3), C(4, 3), C(6, 4), C(7, 4),
+      // normal 2: 8♣ 5♥ 4♣ (4♣ 버림)
+      C(8, 1), C(5, 3), C(4, 1),
+      // normal 3: J♣ 5♣ 6♣ (6♣ 버림)
+      C(11, 1), C(5, 1), C(6, 1),
+      // normal 4: T♣ 7♣ 3♣ (3♣ 버림)
+      C(10, 1), C(7, 1), C(3, 1),
+      // normal 5: 2♥ 8♠ T♠ (T♠ 버림)
+      C(2, 3), C(8, 4), C(10, 4),
+    ],
+    firstTurnPlacements: ["top", "middle", "middle", "bottom", "bottom"],
+    normalTurns: [
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "middle" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "top" },
+          { handIdxInTurn: 1, row: "middle" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "bottom" },
+          { handIdxInTurn: 1, row: "bottom" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+      {
+        placements: [
+          { handIdxInTurn: 0, row: "top" },
+          { handIdxInTurn: 1, row: "bottom" },
+        ],
+        discardHandIdxInTurn: 2,
+      },
+    ],
+  },
+  bubbles: {
+    intro:
+      "이번 시나리오는 **Foul** 사례. top·middle·bottom 강도가 bottom ≥ middle ≥ top이 안 되면 Foul로 라인 자동 패배 + Royalty 0이 됩니다.",
+    first_turn_my:
+      "첫 5장에 K가 두 장(K♠ K♥). 사용자는 K♠을 top에 두고 K♥는 bottom으로 보냈습니다. 강한 K 페어를 top에 두면 royalty +8이지만, middle이 K 페어보다 강해야 Foul을 피합니다.",
+    first_turn_opp_done:
+      "봇은 평범한 보드를 만들고 있습니다.",
+    normal_turn_my:
+      "K♣를 또 받았네요. top에 추가해 K 페어를 굳혔습니다. 그런데 middle 자리에 들어갈 카드들이 모두 페어를 못 만들어요. 이게 곧 Foul로 이어집니다.",
+    result:
+      "**FOUL** — middle이 high card(J)인데 top은 K 페어라 middle < top. 모든 라인 자동 패배(-3) + 스쿱(-3) + Royalty 0. 봇 royalty만큼도 더 빼앗깁니다. **교훈**: top에 페어를 두려면 middle이 그보다 강해야 합니다. middle을 못 살리면 K를 middle/bottom으로 보내는 게 안전.",
+  },
+};
+
+export const TUTORIAL_SCENARIOS: TutorialScenario[] = [
+  SCENARIO_BASICS,
+  SCENARIO_FANTASY,
+  SCENARIO_FOUL,
+];

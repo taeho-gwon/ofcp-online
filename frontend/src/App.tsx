@@ -13,6 +13,7 @@ import { Practice } from "./pages/Practice";
 import { Replay } from "./pages/Replay";
 import { Room } from "./pages/Room";
 import { Tutorial } from "./pages/Tutorial";
+import { TutorialList } from "./pages/TutorialList";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
@@ -25,7 +26,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/nickname-setup" element={<NicknameSetup />} />
           <Route path="/practice" element={<Practice />} />
-          <Route path="/tutorial" element={<Tutorial />} />
+          <Route path="/tutorial" element={<TutorialList />} />
+          <Route path="/tutorial/:scenarioId" element={<Tutorial />} />
           <Route path="/about" element={<About />} />
           <Route
             path="/"
