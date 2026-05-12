@@ -5,6 +5,7 @@ const SUBTITLE: Record<string, string> = {
   basics: "OFC 라운드 흐름과 점수 계산 익히기",
   fantasy: "top에 QQ 이상 페어로 다음 라운드 FantasyLand 진입",
   foul: "Foul로 자동 패배하는 함정과 회피 요령",
+  "fl-progress": "14장 한 번에 받는 FL 라운드 + 연속 FL 조건",
 };
 
 export function TutorialList() {

@@ -22,10 +22,11 @@ import {
 import { headToHeadMatchup } from "../lib/scoring";
 import {
   type BubbleKey,
+  type NormalScenario,
   type PlayerScript,
   TUTORIAL_SCENARIOS,
-  type TutorialScenario,
 } from "../lib/tutorialScenarios";
+import { FantasyTutorial } from "./FantasyTutorial";
 
 const ME_ID = "self";
 const BOT_ID = "bot";
@@ -110,7 +111,7 @@ function applyOppTurn(
   return applyMyTurn(board, discarded, hand, turnIdx, script);
 }
 
-function derive(steps: Step[], stepIdx: number, sc: TutorialScenario): Derived {
+function derive(steps: Step[], stepIdx: number, sc: NormalScenario): Derived {
   let myBoard = empty();
   let myHand: Card[] = [];
   let myDiscarded: Card[] = [];
@@ -181,10 +182,17 @@ function buildEvaluation(b: Board): BoardEvaluation {
 }
 
 export function Tutorial() {
-  const navigate = useNavigate();
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const scenario =
     TUTORIAL_SCENARIOS.find((s) => s.id === scenarioId) ?? TUTORIAL_SCENARIOS[0];
+  if (scenario.kind === "fantasy") {
+    return <FantasyTutorial scenario={scenario} />;
+  }
+  return <NormalTutorialInner scenario={scenario} />;
+}
+
+function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
+  const navigate = useNavigate();
   const steps = useMemo(() => buildSteps(), []);
   const [stepIdx, setStepIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);

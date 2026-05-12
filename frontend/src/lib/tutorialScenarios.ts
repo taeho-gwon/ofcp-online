@@ -17,21 +17,46 @@ export interface PlayerScript {
   normalTurns: NormalTurnScript[]; // 4개
 }
 
-export type BubbleKey =
+export type NormalBubbleKey =
   | "intro"
   | "first_turn_my"
   | "first_turn_opp_done"
   | "normal_turn_my"
   | "result";
 
-export interface TutorialScenario {
+export type FantasyBubbleKey = "intro" | "fl_hand" | "fl_placed" | "result";
+
+// 호환을 위한 alias (이전 코드에서 import해 쓰던 이름)
+export type BubbleKey = NormalBubbleKey;
+
+export interface NormalScenario {
+  kind: "normal";
   id: string;
   title: string;
   outro: string;
   player: PlayerScript;
   opponent: PlayerScript & { nickname: string };
-  bubbles: Record<BubbleKey, string>;
+  bubbles: Record<NormalBubbleKey, string>;
 }
+
+export interface FantasyScenario {
+  kind: "fantasy";
+  id: string;
+  title: string;
+  outro: string;
+  player: {
+    cards: Card[]; // 14장
+    // 14장 중 어떤 13장을 어느 row에 배치할지. 나머지 1장은 자동 버림.
+    placements: { handIdx: number; row: Row }[];
+  };
+  opponent: {
+    nickname: string;
+    board: { top: Card[]; middle: Card[]; bottom: Card[] };
+  };
+  bubbles: Record<FantasyBubbleKey, string>;
+}
+
+export type TutorialScenario = NormalScenario | FantasyScenario;
 
 // ── 시나리오 1: 기본 — 세 라인 Royalty 동시 노리기 ──────────────────────────
 //
@@ -42,7 +67,8 @@ export interface TutorialScenario {
 //                            합계 Royalty +11
 //
 // 사용자 버림(2♠/2♣/2♦/9♦): 모두 어디에도 안 맞는 작은/무의미 카드.
-export const SCENARIO_BASICS: TutorialScenario = {
+export const SCENARIO_BASICS: NormalScenario = {
+  kind: "normal",
   id: "basics",
   title: "기본 라운드",
   outro:
@@ -172,7 +198,8 @@ export const SCENARIO_BASICS: TutorialScenario = {
 //
 // 학습 포인트: top에 QQ 이상 페어를 만들면 **다음 라운드에 14장+를 한 번에**
 // 받는 FantasyLand에 진입한다. KK는 15장, AA는 16장, 트립스(222 등)는 17장.
-export const SCENARIO_FANTASY: TutorialScenario = {
+export const SCENARIO_FANTASY: NormalScenario = {
+  kind: "normal",
   id: "fantasy",
   title: "FantasyLand 진입",
   outro:
@@ -292,7 +319,8 @@ export const SCENARIO_FANTASY: TutorialScenario = {
 //   bottom: A♥ K♥ Q♥ T♥ 8♥ — ♥ 플러시 (강함, rank 6)
 //
 // middle(high card) < top(K pair) → FOUL. 라인 모두 자동 패배 + Royalty 0.
-export const SCENARIO_FOUL: TutorialScenario = {
+export const SCENARIO_FOUL: NormalScenario = {
+  kind: "normal",
   id: "foul",
   title: "Foul — 피해야 하는 함정",
   outro:
@@ -407,8 +435,80 @@ export const SCENARIO_FOUL: TutorialScenario = {
   },
 };
 
+// ── 시나리오 4: FantasyLand 진행 + 연속 FL ─────────────────────────────────
+//
+// 사용자가 FL 라운드(14장 한 번에)를 진행한다. 13장 배치 + 1장 버림.
+// 의도 최종 보드:
+//   top:    Q♣ Q♦ A♠            — Q 페어 (Royalty +7)
+//   middle: K♥ K♣ 9♦ 7♣ 2♣      — K 페어 (Royalty 0)
+//   bottom: 8♣ 8♦ 8♥ 8♠ 4♥      — 8 포카드 (Royalty +10)
+//                                  합계 Royalty +17
+//
+// 학습 포인트:
+// - FL은 14/15/16/17장을 한 번에 받아 1턴으로 끝.
+// - **연속 FL 자격**: FL 중 top이 트립스 이상 또는 bottom이 포카드 이상이면
+//   다음 라운드도 FL(14장). 이 시나리오는 bottom 포카드로 연속 FL 진입.
+export const SCENARIO_FL_PROGRESS: FantasyScenario = {
+  kind: "fantasy",
+  id: "fl-progress",
+  title: "FantasyLand 진행 + 연속 FL",
+  outro:
+    "FL 중 top 트립스 이상 또는 bottom 포카드 이상을 만들면 다음 라운드도 14장 FL. 이번 보드는 bottom 8 포카드라 연속 FL 자격 획득.",
+  player: {
+    // FL hand 14장 (handIdx 0~13)
+    cards: [
+      C(14, 4),                              // 0: A♠
+      C(13, 4), C(13, 3), C(13, 1),          // 1~3: K♠ K♥ K♣ (트립스 시드)
+      C(12, 1), C(12, 2),                    // 4~5: Q♣ Q♦
+      C(9, 2), C(4, 3),                      // 6~7: 9♦ 4♥ (middle kicker)
+      C(8, 1), C(8, 2), C(8, 3), C(8, 4),    // 8~11: 8 포카드
+      C(2, 1),                               // 12: 2♣ (bottom kicker)
+      C(7, 1),                               // 13: 7♣ (버림 — 어디에도 안 맞음)
+    ],
+    // 13장 배치 + handIdx 13(7♣)이 자동 버림
+    placements: [
+      // top: Q♣ Q♦ A♠ — Q 페어 + A kicker (Royalty +7)
+      { handIdx: 4, row: "top" },  // Q♣
+      { handIdx: 5, row: "top" },  // Q♦
+      { handIdx: 0, row: "top" },  // A♠
+      // middle: K♠ K♥ K♣ 9♦ 4♥ — K 트립스 (Royalty +2)
+      { handIdx: 1, row: "middle" },
+      { handIdx: 2, row: "middle" },
+      { handIdx: 3, row: "middle" },
+      { handIdx: 6, row: "middle" },
+      { handIdx: 7, row: "middle" },
+      // bottom: 8♣ 8♦ 8♥ 8♠ 2♣ — 8 포카드 (Royalty +10) → 연속 FL trigger
+      { handIdx: 8, row: "bottom" },
+      { handIdx: 9, row: "bottom" },
+      { handIdx: 10, row: "bottom" },
+      { handIdx: 11, row: "bottom" },
+      { handIdx: 12, row: "bottom" },
+    ],
+  },
+  opponent: {
+    nickname: "튜토리얼 봇",
+    board: {
+      // 봇은 평범한 일반 라운드 보드
+      top: [C(5, 4), C(5, 1), C(7, 4)], // 5♠ 5♣ 7♠ — 5 페어
+      middle: [C(6, 1), C(6, 2), C(9, 1), C(11, 1), C(2, 3)], // 6♣ 6♦ 9♣ J♣ 2♥ — 6 페어
+      bottom: [C(3, 3), C(4, 2), C(5, 3), C(6, 3), C(7, 2)], // 3♥ 4♦ 5♥ 6♥ 7♦ — 3-7 straight
+    },
+  },
+  bubbles: {
+    intro:
+      "이번은 **FantasyLand 진행** 시나리오. 이전 라운드에서 top에 Q 페어를 만들어 FL 자격을 얻었습니다. FL은 14장을 한 번에 받아 1턴에 13장 배치하고 1장은 버립니다.",
+    fl_hand:
+      "FL hand 14장이 손에 들어왔습니다. K 세 장(트립스 시드), 8 네 장(포카드!), Q 두 장 등 강한 카드가 모여있네요. middle을 K 트리플, bottom을 8 포카드, top을 Q 페어로 만드는 게 가장 큰 점수가 나옵니다.",
+    fl_placed:
+      "배치 완료. top Q 페어(+7), middle K 트리플(+2), bottom 8 포카드(+10) = Royalty +19. **bottom 포카드 이상이라 연속 FL 자격**도 획득. 다음 라운드도 14장!",
+    result:
+      "점수 — 라인 +3, 스쿱 +3, Royalty 차이 +17(사용자 19 − 봇 2) = 총 +23. 그리고 **다음 라운드도 FantasyLand(14장)**. top 트립스나 bottom 포카드 이상이 연속 FL 조건이라는 점 기억하세요.",
+  },
+};
+
 export const TUTORIAL_SCENARIOS: TutorialScenario[] = [
   SCENARIO_BASICS,
   SCENARIO_FANTASY,
   SCENARIO_FOUL,
+  SCENARIO_FL_PROGRESS,
 ];
