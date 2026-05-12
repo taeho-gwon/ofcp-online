@@ -72,8 +72,9 @@ export function useMatchupAnimation(
   }, [matchupsKey]);
 
   useEffect(() => {
-    if (!matchups || matchups.length === 0) return;
-    if (steps.length === 0) {
+    if (!matchups) return; // 결과 phase 아님
+    // 1인용(연습) — matchups가 빈 배열이거나 step이 없으면 즉시 onDone.
+    if (matchups.length === 0 || steps.length === 0) {
       const t = setTimeout(() => onDoneRef.current(), 100);
       return () => clearTimeout(t);
     }
