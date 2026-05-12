@@ -20,6 +20,7 @@ from app.core.db import get_engine
 from app.core.redis import get_redis
 from app.game.repository import GameRepository
 from app.game.service import GameService
+from app.records import service as records_service
 from app.rooms.repository import RoomLockError, RoomRepository
 from app.rooms.schemas import (
     CreateRoomRequest,
@@ -149,12 +150,8 @@ async def room_socket(
         await websocket.close(code=4401, reason="user not found")
         return
 
-    svc = RoomService(
-        repo=RoomRepository(redis),
-        game_service=GameService(
-            GameRepository(redis, ttl_seconds=settings.game_ttl_seconds)
-        ),
-    )
+    game_svc = GameService(GameRepository(redis, ttl_seconds=settings.game_ttl_seconds))
+    svc = RoomService(repo=RoomRepository(redis), game_service=game_svc)
 
     # 자동 join
     try:
@@ -174,7 +171,9 @@ async def room_socket(
     try:
         while True:
             msg = await websocket.receive_json()
-            await _handle_room_action(svc, code, str(user.id), msg, websocket)
+            await _handle_room_action(
+                svc, game_svc, sm, code, str(user.id), msg, websocket
+            )
     except WebSocketDisconnect:
         pass
     finally:
@@ -183,6 +182,8 @@ async def room_socket(
 
 async def _handle_room_action(
     svc: RoomService,
+    game_svc: GameService,
+    sm: async_sessionmaker,
     code: str,
     user_id: str,
     msg: dict,
@@ -196,6 +197,12 @@ async def _handle_room_action(
             await room_manager.broadcast(code, _room_payload(room))
             started = await svc.try_start_game(code)
             if started is not None and started.game_id is not None:
+                state = await game_svc.get_state(started.game_id)
+                async with sm() as session:
+                    await records_service.start_game(
+                        session, state=state, room_code=code
+                    )
+                    await session.commit()
                 await room_manager.broadcast(
                     code, {"type": "start", "data": {"game_id": started.game_id}}
                 )

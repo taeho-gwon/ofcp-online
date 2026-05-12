@@ -23,6 +23,7 @@ from app.config import settings
 from app.core.db import Base, get_session
 from app.core.redis import get_redis
 from app.main import app
+from app.records import models as _records_models  # noqa: F401
 from app.users import models as _users_models  # noqa: F401
 
 TEST_DB_NAME = "ofcp_test"
@@ -66,7 +67,12 @@ async def _setup_db(test_db_url: str) -> AsyncIterator[AsyncEngine]:
 @pytest_asyncio.fixture
 async def db_engine(_setup_db: AsyncEngine) -> AsyncEngine:
     async with _setup_db.begin() as conn:
-        await conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
+        await conn.execute(
+            text(
+                "TRUNCATE TABLE game_events, game_players, games, users "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
     return _setup_db
 
 

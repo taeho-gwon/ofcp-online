@@ -22,6 +22,7 @@ from app.game.schemas import (
 )
 from app.game.service import GameNotFoundError, GameService, WrongPlayerError
 from app.game.state import GameState, Phase
+from app.records import service as records_service
 from app.users import repository as users_repo
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ async def game_socket(
         while True:
             msg = await websocket.receive_json()
             await _handle_action(
-                svc, game_id, user_id_str, msg, websocket, display_names
+                svc, sm, game_id, user_id_str, msg, websocket, display_names
             )
     except WebSocketDisconnect:
         pass
@@ -141,6 +142,7 @@ async def game_socket(
 
 async def _handle_action(
     svc: GameService,
+    sm: async_sessionmaker[AsyncSession],
     game_id: str,
     user_id_str: str,
     msg: dict,
@@ -150,14 +152,26 @@ async def _handle_action(
     action = msg.get("action")
     # 모든 액션은 본인 명의로만 전송 가능. payload.player_id를 강제 user_id로 덮어쓴다.
     msg = {**msg, "player_id": user_id_str}
+
+    hand_before: list[dict] = []
+    payload_extra: dict = {}
     try:
         if action == "first_turn":
             req = FirstTurnMoveRequest.model_validate(msg)
+            hand_before = await _capture_hand(svc, game_id, user_id_str)
+            payload_extra = {
+                "placements": _placements_to_payload(req.placements),
+            }
             state = await svc.place_first_turn(
                 game_id, req.player_id, to_placements(req.placements)
             )
         elif action == "normal_turn":
             req = NormalTurnMoveRequest.model_validate(msg)
+            hand_before = await _capture_hand(svc, game_id, user_id_str)
+            payload_extra = {
+                "placements": _placements_to_payload(req.placements),
+                "discard": req.discard.model_dump(),
+            }
             state = await svc.place_normal_turn(
                 game_id,
                 req.player_id,
@@ -166,6 +180,11 @@ async def _handle_action(
             )
         elif action == "fantasy_turn":
             req = FantasyTurnMoveRequest.model_validate(msg)
+            hand_before = await _capture_hand(svc, game_id, user_id_str)
+            payload_extra = {
+                "placements": _placements_to_payload(req.placements),
+                "discards": [c.model_dump() for c in req.discards],
+            }
             state = await svc.place_fantasy_turn(
                 game_id,
                 req.player_id,
@@ -183,7 +202,32 @@ async def _handle_action(
         await sender.send_json({"type": "error", "data": {"message": str(e)}})
         return
 
+    if action in ("first_turn", "normal_turn", "fantasy_turn"):
+        try:
+            async with sm() as session:
+                await records_service.append_action_event(
+                    session,
+                    game_id=game_id,
+                    actor_id=user_id_str,
+                    action=action,
+                    hand_before=hand_before,
+                    payload_extra=payload_extra,
+                )
+                await session.commit()
+        except Exception as e:
+            logger.warning("append_action_event failed for %s: %s", game_id, e)
+
     await manager.broadcast(game_id, state, display_names)
+
+    if state.phase in (Phase.DONE, Phase.GAME_OVER):
+        try:
+            async with sm() as session:
+                await records_service.append_round_end(session, state=state)
+                if state.phase == Phase.GAME_OVER:
+                    await records_service.append_game_end(session, state=state)
+                await session.commit()
+        except Exception as e:
+            logger.warning("records round/game end failed for %s: %s", game_id, e)
 
     if state.phase == Phase.DONE:
         try:
@@ -192,3 +236,18 @@ async def _handle_action(
             logger.warning("auto-advance failed for %s: %s", game_id, e)
             return
         await manager.broadcast(game_id, advanced, display_names)
+
+
+async def _capture_hand(svc: GameService, game_id: str, user_id_str: str) -> list[dict]:
+    try:
+        state = await svc.get_state(game_id)
+    except GameNotFoundError:
+        return []
+    player = next((p for p in state.players if p.player_id == user_id_str), None)
+    if player is None:
+        return []
+    return [c.to_dict() for c in player.hand]
+
+
+def _placements_to_payload(placements: dict) -> dict[str, list[dict]]:
+    return {row: [c.model_dump() for c in cards] for row, cards in placements.items()}

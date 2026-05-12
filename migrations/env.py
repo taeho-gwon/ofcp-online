@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
 from app.core.db import Base
+from app.records import models as _records_models  # noqa: F401
 from app.users import models as _users_models  # noqa: F401
 
 config = context.config
