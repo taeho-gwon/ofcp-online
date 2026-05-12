@@ -9,9 +9,12 @@ description = "Pineapple OFC Online Multiplayer Game"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.14.0",
+    "asyncpg>=0.30.0",
     "fastapi[standard]>=0.136.1",
     "pydantic-settings>=2.14.1",
     "redis>=7.4.0",
+    "sqlalchemy[asyncio]>=2.0.36",
 ]
 
 [project.scripts]

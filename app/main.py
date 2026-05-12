@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api import ws
 from app.api.router import router
 from app.config import settings
+from app.core.db import close_db
 from app.core.redis import close_redis
 
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +22,7 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 async def lifespan(app: FastAPI):
     yield
     await close_redis()
+    await close_db()
 
 
 app = FastAPI(title="OFCP Online", lifespan=lifespan)

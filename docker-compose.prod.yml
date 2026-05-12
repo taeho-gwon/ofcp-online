@@ -5,15 +5,27 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ofcp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_DB: ${POSTGRES_DB:-ofcp}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   api:
     build: .
     environment:
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ofcp}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ofcp}
       # 단일 도메인 운영이라 CORS 자체는 거의 의미가 없지만, 명시할 수 있음.
       # 예: ALLOWED_ORIGINS='["https://example.com"]'
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-["http://localhost"]}
     depends_on:
       - redis
+      - postgres
     restart: unless-stopped
 
   caddy:
@@ -34,5 +46,6 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
   caddy_data:
   caddy_config:

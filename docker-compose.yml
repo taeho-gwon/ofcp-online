@@ -6,5 +6,17 @@ services:
     volumes:
       - redis_data:/data
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ofcp
+      POSTGRES_PASSWORD: ofcp
+      POSTGRES_DB: ofcp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
 volumes:
   redis_data:
+  postgres_data:
