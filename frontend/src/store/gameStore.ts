@@ -1,10 +1,5 @@
 import { create } from "zustand";
-import type { GameState, Row } from "../api/types";
-
-export interface PlacedSlot {
-  handIdx: number;
-  row: Row;
-}
+import type { GameState } from "../api/types";
 
 interface GameStore {
   gameState: GameState | null;
@@ -14,21 +9,10 @@ interface GameStore {
   connected: boolean;
   error: string | null;
 
-  // 인터랙션 상태 (서버 상태 갱신 시 자동 초기화)
-  selectedRow: Row | null;
-  selectedCardIdx: number | null;
-  placed: PlacedSlot[];
-
   setGameState: (s: GameState) => void;
   commitPendingState: () => void;
   setConnected: (c: boolean) => void;
   setError: (e: string | null) => void;
-
-  selectRow: (row: Row | null) => void;
-  selectCard: (idx: number | null) => void;
-  commitPlacement: (handIdx: number, row: Row) => void;
-  unplace: (handIdx: number) => void;
-  clearPending: () => void;
 }
 
 function isResultPhase(s: GameState | null): boolean {
@@ -40,9 +24,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pendingState: null,
   connected: false,
   error: null,
-  selectedRow: null,
-  selectedCardIdx: null,
-  placed: [],
 
   setGameState: (s) => {
     const cur = get().gameState;
@@ -51,49 +32,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ pendingState: s, error: null });
       return;
     }
-    set({
-      gameState: s,
-      pendingState: null,
-      selectedRow: null,
-      selectedCardIdx: null,
-      placed: [],
-      error: null,
-    });
+    set({ gameState: s, pendingState: null, error: null });
   },
   commitPendingState: () => {
     const pending = get().pendingState;
     if (!pending) return;
-    set({
-      gameState: pending,
-      pendingState: null,
-      selectedRow: null,
-      selectedCardIdx: null,
-      placed: [],
-    });
+    set({ gameState: pending, pendingState: null });
   },
   setConnected: (c) => set({ connected: c }),
   setError: (e) => set({ error: e }),
-
-  selectRow: (row) => set({ selectedRow: row }),
-  selectCard: (idx) => set({ selectedCardIdx: idx }),
-
-  commitPlacement: (handIdx, row) => {
-    const { placed } = get();
-    if (placed.some((p) => p.handIdx === handIdx)) return;
-    // 방금 카드를 받은 줄을 활성 줄로 고정한다. 슬롯 우선 흐름에서는 동일 값
-    // 재설정(no-op)이고, 카드 우선 흐름에서는 그 줄이 자동으로 다음 배치 대상이 된다.
-    set({
-      placed: [...placed, { handIdx, row }],
-      selectedRow: row,
-      selectedCardIdx: null,
-    });
-  },
-
-  unplace: (handIdx) => {
-    const { placed } = get();
-    set({ placed: placed.filter((p) => p.handIdx !== handIdx) });
-  },
-
-  clearPending: () =>
-    set({ selectedRow: null, selectedCardIdx: null, placed: [] }),
 }));
