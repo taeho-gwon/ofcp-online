@@ -100,19 +100,19 @@ export const SCENARIO_BASICS: TutorialScenario = {
   opponent: {
     nickname: "튜토리얼 봇",
     cards: [
-      // first 5: 5♥ J♠ J♦ 6♠ 7♦
-      C(5, 3), C(11, 4), C(11, 2), C(6, 4), C(7, 2),
+      // first 5: 5♠ 6♠ 7♦ J♠ 5♥ — 5·6·7을 bottom 스트레이트 시드로 함께 배치
+      C(5, 4), C(6, 4), C(7, 2), C(11, 4), C(5, 3),
       // normal 2: 8♣ 9♣ 3♥ (3♥ 버림)
       C(8, 1), C(9, 1), C(3, 3),
-      // normal 3: 9♥ 5♠ 4♥ (4♥ 버림)
-      C(9, 3), C(5, 4), C(4, 3),
+      // normal 3: J♦ 9♥ 4♥ (4♥ 버림 — J 페어 완성)
+      C(11, 2), C(9, 3), C(4, 3),
       // normal 4: 4♦ 2♥ 6♥ (6♥ 버림)
       C(4, 2), C(2, 3), C(6, 3),
       // normal 5: Q♥ 3♦ 3♠ (3♠ 버림)
       C(12, 3), C(3, 2), C(3, 4),
     ],
-    // first 5: 5♥→top, J♠ J♦→middle(페어 시드), 6♠ 7♦→bottom(스트레이트 시드)
-    firstTurnPlacements: ["top", "middle", "middle", "bottom", "bottom"],
+    // first 5: 5♠ 6♠ 7♦→bottom(스트레이트 시드), J♠→middle, 5♥→top
+    firstTurnPlacements: ["bottom", "bottom", "bottom", "middle", "top"],
     normalTurns: [
       // turn 2 (8♣ 9♣ 3♥): 8♣→middle, 9♣→top, 3♥ 버림
       {
@@ -122,11 +122,11 @@ export const SCENARIO_BASICS: TutorialScenario = {
         ],
         discardHandIdxInTurn: 2,
       },
-      // turn 3 (9♥ 5♠ 4♥): 9♥→middle, 5♠→bottom, 4♥ 버림
+      // turn 3 (J♦ 9♥ 4♥): J♦→middle(J 페어 완성), 9♥→middle, 4♥ 버림
       {
         placements: [
           { handIdxInTurn: 0, row: "middle" },
-          { handIdxInTurn: 1, row: "bottom" },
+          { handIdxInTurn: 1, row: "middle" },
         ],
         discardHandIdxInTurn: 2,
       },
@@ -154,7 +154,7 @@ export const SCENARIO_BASICS: TutorialScenario = {
     first_turn_my:
       "첫 5장. ♥(A·K)는 bottom 플러시 시드로, 4♣·5♦는 middle 스트레이트 시드로, 8♦은 top 페어를 만들 자리로 분배합니다. **강한 카드는 bottom으로 보낸다**가 OFC 기본 원칙입니다.",
     first_turn_opp_done:
-      "봇도 5장을 분배했습니다. 봇은 J 페어 + 스트레이트 시드로 시작했네요.",
+      "봇도 5장을 분배했습니다. 5♠ 6♠ 7♦을 bottom에 모아 스트레이트 시드로 시작했네요.",
     normal_turn_my:
       "이제 매 턴 3장씩 받고 2장만 배치, 1장은 버립니다. 이번 카드 6♣ J♥ 9♦에서 6♣는 middle 스트레이트, J♥는 bottom 플러시로 들어가고 9♦은 어떤 라인에도 안 맞아 버립니다. **무의미한 카드는 과감히 버리는 것**이 OFC의 핵심.",
     result:
