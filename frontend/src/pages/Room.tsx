@@ -5,6 +5,11 @@ import type { Room as RoomData } from "../api/authTypes";
 import { RoomSocket } from "../api/roomsWs";
 import { useAuthStore } from "../store/authStore";
 
+interface Countdown {
+  gameId: string;
+  remaining: number;
+}
+
 export function Room() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
@@ -13,6 +18,7 @@ export function Room() {
 
   const [room, setRoom] = useState<RoomData | null>(null);
   const [connected, setConnected] = useState(false);
+  const [countdown, setCountdown] = useState<Countdown | null>(null);
   const socketRef = useRef<RoomSocket | null>(null);
 
   useEffect(() => {
@@ -24,7 +30,12 @@ export function Room() {
         if (msg.type === "room") {
           setRoom(msg.data);
         } else if (msg.type === "start") {
-          navigate(`/game/${msg.data.game_id}`);
+          const secs = msg.data.countdown_seconds ?? 0;
+          if (secs > 0) {
+            setCountdown({ gameId: msg.data.game_id, remaining: secs });
+          } else {
+            navigate(`/game/${msg.data.game_id}`);
+          }
         } else if (msg.type === "closed") {
           toast.error(
             msg.data.reason === "host_left"
@@ -44,13 +55,33 @@ export function Room() {
     };
   }, [code, accessToken, navigate]);
 
+  // 카운트다운 tick
+  useEffect(() => {
+    if (!countdown) return;
+    if (countdown.remaining <= 0) {
+      navigate(`/game/${countdown.gameId}`);
+      return;
+    }
+    const t = setTimeout(() => {
+      setCountdown((c) => (c ? { ...c, remaining: c.remaining - 1 } : c));
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [countdown, navigate]);
+
   const me = room?.members.find((m) => m.user_id === user?.id);
-  const allReady =
-    !!room && room.members.length >= 2 && room.members.every((m) => m.ready);
+  const isHost = !!room && room.host_user_id === user?.id;
+  const guests = room ? room.members.filter((m) => m.user_id !== room.host_user_id) : [];
+  const allGuestsReady = guests.length > 0 && guests.every((m) => m.ready);
+  const canStart = !!room && room.members.length >= 2 && allGuestsReady;
 
   const toggleReady = () => {
     if (!me || !socketRef.current) return;
     socketRef.current.send({ action: "set_ready", ready: !me.ready });
+  };
+
+  const startGame = () => {
+    if (!socketRef.current || !canStart) return;
+    socketRef.current.send({ action: "start" });
   };
 
   const leave = () => {
@@ -84,6 +115,7 @@ export function Room() {
             type="button"
             onClick={leave}
             className="text-xs text-slate-500 hover:underline"
+            disabled={!!countdown}
           >
             ← 로비
           </button>
@@ -132,7 +164,7 @@ export function Room() {
                     </div>
                   );
                 }
-                const isHost = m.user_id === room.host_user_id;
+                const memberIsHost = m.user_id === room.host_user_id;
                 const isMe = m.user_id === user?.id;
                 return (
                   <div
@@ -145,7 +177,7 @@ export function Room() {
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">{m.nickname}</span>
-                      {isHost && (
+                      {memberIsHost && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
                           호스트
                         </span>
@@ -154,7 +186,11 @@ export function Room() {
                         <span className="text-xs text-emerald-700">(나)</span>
                       )}
                     </div>
-                    {m.ready ? (
+                    {memberIsHost ? (
+                      <span className="text-xs px-2 py-1 rounded bg-amber-500 text-white font-semibold">
+                        시작 권한
+                      </span>
+                    ) : m.ready ? (
                       <span className="text-xs px-2 py-1 rounded bg-emerald-600 text-white font-semibold">
                         준비
                       </span>
@@ -168,13 +204,36 @@ export function Room() {
               })}
             </div>
 
-            {allReady && (
-              <div className="text-center text-xs text-emerald-700">
-                전원 준비 완료 — 곧 시작됩니다…
+            {countdown ? (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-3 text-center">
+                <div className="text-emerald-700 font-semibold">
+                  곧 게임이 시작됩니다
+                </div>
+                <div className="text-4xl font-mono font-bold text-emerald-700 mt-1">
+                  {countdown.remaining}
+                </div>
               </div>
-            )}
-
-            {me && (
+            ) : isHost ? (
+              <button
+                type="button"
+                onClick={startGame}
+                disabled={!canStart}
+                className="px-4 py-2 rounded text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                title={
+                  !canStart
+                    ? room.members.length < 2
+                      ? "최소 2명이 필요합니다"
+                      : "참가자가 아직 준비하지 않았습니다"
+                    : undefined
+                }
+              >
+                {room.members.length < 2
+                  ? "참가자 대기 중"
+                  : allGuestsReady
+                    ? "게임 시작"
+                    : "참가자 준비 대기 중"}
+              </button>
+            ) : me ? (
               <button
                 type="button"
                 onClick={toggleReady}
@@ -186,7 +245,7 @@ export function Room() {
               >
                 {me.ready ? "준비 해제" : "준비 완료"}
               </button>
-            )}
+            ) : null}
           </>
         )}
       </div>

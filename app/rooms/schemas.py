@@ -108,3 +108,7 @@ class WsSetReady(BaseModel):
 
 class WsLeave(BaseModel):
     action: Literal["leave"]
+
+
+class WsStart(BaseModel):
+    action: Literal["start"]

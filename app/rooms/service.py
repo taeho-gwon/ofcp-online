@@ -43,7 +43,8 @@ class RoomService:
         if max_seats not in (2, 3):
             raise RoomError("max_seats must be 2 or 3")
 
-        host = RoomMember(user_id=host_user_id, nickname=host_nickname, ready=False)
+        # 방장은 별도 ready 토글 없이 "게임 시작" 버튼으로 출발시킨다.
+        host = RoomMember(user_id=host_user_id, nickname=host_nickname, ready=True)
         for _ in range(_CREATE_MAX_RETRIES):
             code = _generate_code()
             room = Room(
@@ -110,6 +111,9 @@ class RoomService:
                 raise RoomNotFoundError(code)
             if room.game_id is not None:
                 raise RoomError("이미 게임이 시작된 방입니다.")
+            # 방장은 ready 토글 대상 아님 — 항상 ready 상태.
+            if user_id == room.host_user_id:
+                return room
             member = room.find_member(user_id)
             if member is None:
                 raise RoomError("방의 멤버가 아닙니다.")
@@ -117,18 +121,20 @@ class RoomService:
             await self._repo.save(room)
             return room
 
-    async def try_start_game(self, code: str) -> Room | None:
-        """모든 멤버 ready + 2명 이상이면 게임 생성. 시작했으면 갱신된 Room 반환."""
+    async def start_game(self, code: str, *, user_id: str) -> Room:
+        """방장 명시적 호출. 인원 2+ 전원 ready 조건 충족 시 game 생성."""
         async with self._repo.acquire_lock(code):
             room = await self._repo.load(code)
             if room is None:
                 raise RoomNotFoundError(code)
+            if user_id != room.host_user_id:
+                raise RoomError("방장만 게임을 시작할 수 있습니다.")
             if room.game_id is not None:
-                return None
+                raise RoomError("이미 게임이 시작된 방입니다.")
             if len(room.members) < 2:
-                return None
+                raise RoomError("최소 2명이 필요합니다.")
             if not all(m.ready for m in room.members):
-                return None
+                raise RoomError("아직 준비하지 않은 참가자가 있습니다.")
             state = await self._games.create_game(
                 player_ids=[m.user_id for m in room.members],
                 ruleset_name=room.ruleset_name,

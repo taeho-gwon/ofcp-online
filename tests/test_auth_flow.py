@@ -147,7 +147,12 @@ async def test_refresh_rejects_access_token(
     assert resp.status_code == 401
 
 
-async def test_dev_login_disabled_by_default(client: AsyncClient):
+async def test_dev_login_disabled_by_default(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "dev_auth_enabled", False)
     resp = await client.post("/api/auth/dev-login", json={"nickname": "alice"})
     assert resp.status_code == 404
 

@@ -32,7 +32,8 @@ async def test_create_room_basic(svc: RoomService):
     assert len(room.members) == 1
     assert room.members[0].user_id == "u1"
     assert room.members[0].nickname == "alice"
-    assert room.members[0].ready is False
+    # 방장은 ready 토글 없이 자동 ready=True.
+    assert room.members[0].ready is True
     assert room.game_id is None
 
 
@@ -111,11 +112,22 @@ async def test_leave_host_closes_room(svc: RoomService):
         await svc.get(room.code)
 
 
-async def test_set_ready_toggles(svc: RoomService):
+async def test_set_ready_toggles_for_guest(svc: RoomService):
     room = await svc.create(
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
     )
-    room = await svc.set_ready(room.code, user_id="u1", ready=True)
+    await svc.join(room.code, user_id="u2", nickname="bob")
+    room = await svc.set_ready(room.code, user_id="u2", ready=True)
+    bob = room.find_member("u2")
+    assert bob is not None and bob.ready is True
+
+
+async def test_set_ready_host_is_noop(svc: RoomService):
+    """방장은 자동 ready 상태 유지 — set_ready 토글 영향 X."""
+    room = await svc.create(
+        host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
+    )
+    room = await svc.set_ready(room.code, user_id="u1", ready=False)
     assert room.members[0].ready is True
 
 
@@ -124,7 +136,7 @@ async def test_set_ready_non_member_rejected(svc: RoomService):
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
     )
     with pytest.raises(RoomError):
-        await svc.set_ready(room.code, user_id="u2", ready=True)
+        await svc.set_ready(room.code, user_id="u3", ready=True)
 
 
 async def test_leave_does_not_reset_other_ready(svc: RoomService):
@@ -139,33 +151,41 @@ async def test_leave_does_not_reset_other_ready(svc: RoomService):
     assert bob is not None and bob.ready is True
 
 
-async def test_try_start_game_all_ready_creates_game(svc: RoomService):
+async def test_start_game_by_host_all_ready(svc: RoomService):
     room = await svc.create(
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
     )
     await svc.join(room.code, user_id="u2", nickname="bob")
-    await svc.set_ready(room.code, user_id="u1", ready=True)
     await svc.set_ready(room.code, user_id="u2", ready=True)
-    started = await svc.try_start_game(room.code)
-    assert started is not None
+    started = await svc.start_game(room.code, user_id="u1")
     assert started.game_id is not None
 
 
-async def test_try_start_game_partial_ready_no_op(svc: RoomService):
+async def test_start_game_non_host_rejected(svc: RoomService):
     room = await svc.create(
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
     )
     await svc.join(room.code, user_id="u2", nickname="bob")
-    await svc.set_ready(room.code, user_id="u1", ready=True)
-    assert await svc.try_start_game(room.code) is None
+    await svc.set_ready(room.code, user_id="u2", ready=True)
+    with pytest.raises(RoomError):
+        await svc.start_game(room.code, user_id="u2")
 
 
-async def test_try_start_game_single_member_no_op(svc: RoomService):
+async def test_start_game_partial_ready_rejected(svc: RoomService):
     room = await svc.create(
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
     )
-    await svc.set_ready(room.code, user_id="u1", ready=True)
-    assert await svc.try_start_game(room.code) is None
+    await svc.join(room.code, user_id="u2", nickname="bob")
+    with pytest.raises(RoomError):
+        await svc.start_game(room.code, user_id="u1")
+
+
+async def test_start_game_single_member_rejected(svc: RoomService):
+    room = await svc.create(
+        host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=2
+    )
+    with pytest.raises(RoomError):
+        await svc.start_game(room.code, user_id="u1")
 
 
 async def test_join_after_game_started_rejected(svc: RoomService):
@@ -173,8 +193,7 @@ async def test_join_after_game_started_rejected(svc: RoomService):
         host_user_id="u1", host_nickname="alice", ruleset_name="pineapple", max_seats=3
     )
     await svc.join(room.code, user_id="u2", nickname="bob")
-    await svc.set_ready(room.code, user_id="u1", ready=True)
     await svc.set_ready(room.code, user_id="u2", ready=True)
-    await svc.try_start_game(room.code)
+    await svc.start_game(room.code, user_id="u1")
     with pytest.raises(RoomError):
         await svc.join(room.code, user_id="u3", nickname="carol")

@@ -44,7 +44,7 @@ async def test_create_room_returns_code_and_host(
     assert body["host_user_id"] == str(user.id)
     assert len(body["members"]) == 1
     assert body["members"][0]["nickname"] == "alice"
-    assert body["members"][0]["ready"] is False
+    assert body["members"][0]["ready"] is True  # 방장 자동 ready
     assert body["game_id"] is None
 
 

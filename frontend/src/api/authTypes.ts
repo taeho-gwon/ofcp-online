@@ -55,10 +55,14 @@ export interface Room {
 
 export type RoomWsServerMsg =
   | { type: "room"; data: Room }
-  | { type: "start"; data: { game_id: string } }
+  | {
+      type: "start";
+      data: { game_id: string; countdown_seconds?: number };
+    }
   | { type: "closed"; data: { reason: string } }
   | { type: "error"; data: { message: string } };
 
 export type RoomWsClientMsg =
   | { action: "set_ready"; ready: boolean }
+  | { action: "start" }
   | { action: "leave" };

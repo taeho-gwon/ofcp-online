@@ -28,6 +28,7 @@ from app.rooms.schemas import (
     RoomResponse,
     WsLeave,
     WsSetReady,
+    WsStart,
     serialize_room,
 )
 from app.rooms.service import RoomError, RoomNotFoundError, RoomService
@@ -35,6 +36,8 @@ from app.users import repository as users_repo
 from app.users.models import User
 
 logger = logging.getLogger(__name__)
+
+START_COUNTDOWN_SECONDS = 5
 
 rest_router = APIRouter(prefix="/rooms", tags=["rooms"])
 ws_router = APIRouter()
@@ -195,17 +198,27 @@ async def _handle_room_action(
             req = WsSetReady.model_validate(msg)
             room = await svc.set_ready(code, user_id=user_id, ready=req.ready)
             await room_manager.broadcast(code, _room_payload(room))
-            started = await svc.try_start_game(code)
-            if started is not None and started.game_id is not None:
-                state = await game_svc.get_state(started.game_id)
-                async with sm() as session:
-                    await records_service.start_game(
-                        session, state=state, room_code=code
-                    )
-                    await session.commit()
-                await room_manager.broadcast(
-                    code, {"type": "start", "data": {"game_id": started.game_id}}
-                )
+        elif action == "start":
+            WsStart.model_validate(msg)
+            started = await svc.start_game(code, user_id=user_id)
+            if started.game_id is None:
+                return  # 방어적
+            state = await game_svc.get_state(started.game_id)
+            async with sm() as session:
+                await records_service.start_game(session, state=state, room_code=code)
+                await session.commit()
+            # 갱신된 room 먼저 broadcast (game_id 노출되어 UI에서 진입 차단 가능)
+            await room_manager.broadcast(code, _room_payload(started))
+            await room_manager.broadcast(
+                code,
+                {
+                    "type": "start",
+                    "data": {
+                        "game_id": started.game_id,
+                        "countdown_seconds": START_COUNTDOWN_SECONDS,
+                    },
+                },
+            )
         elif action == "leave":
             WsLeave.model_validate(msg)
             room, closed = await svc.leave(code, user_id=user_id)
