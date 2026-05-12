@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import type { Card, Row } from "../api/types";
-import { cardKey } from "../api/types";
-import { CardView, EmptySlot } from "../components/Card";
+import type { Card, PlayerState, Row } from "../api/types";
+import { ROW_CAPACITY } from "../api/types";
+import {
+  ActionBar,
+  getRequiredDiscard,
+  getRequiredPlace,
+} from "../components/ActionBar";
+import { CardView } from "../components/Card";
+import { Hand } from "../components/Hand";
+import { PlayerBoard } from "../components/PlayerBoard";
 import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
   handLabel,
@@ -13,30 +20,36 @@ import {
 } from "../lib/royalty";
 import { useAuthStore } from "../store/authStore";
 
-const ROW_CAP: Record<Row, number> = { top: 3, middle: 5, bottom: 5 };
-const ROWS: Row[] = ["top", "middle", "bottom"];
-const ROW_LABEL: Record<Row, string> = {
-  top: "TOP (3)",
-  middle: "MIDDLE (5)",
-  bottom: "BOTTOM (5)",
-};
 const SUITS = [1, 2, 3, 4];
 const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
-type Phase = "first" | "normal" | "done";
+type Phase = "first_turn" | "normal_turn" | "done";
 
-interface Placed {
+interface Board {
   top: Card[];
   middle: Card[];
   bottom: Card[];
 }
 
-const emptyPlaced = (): Placed => ({ top: [], middle: [], bottom: [] });
+interface PracticeState {
+  phase: Phase;
+  turnIdx: number; // 1=first, 2..5=normal
+  deck: Card[];
+  hand: Card[];
+  committed: Board; // 이전 턴들에서 확정된 카드
+  discarded: Card[];
+}
+
+interface PlacedSlot {
+  handIdx: number;
+  row: Row;
+}
+
+const emptyBoard = (): Board => ({ top: [], middle: [], bottom: [] });
 
 function freshDeck(): Card[] {
   const deck: Card[] = [];
   for (const s of SUITS) for (const r of RANKS) deck.push({ rank: r, suit: s });
-  // Fisher–Yates
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -44,24 +57,15 @@ function freshDeck(): Card[] {
   return deck;
 }
 
-interface GameState {
-  phase: Phase;
-  turnIdx: number; // 1=first, 2..5=normal
-  deck: Card[];
-  hand: Card[];
-  placed: Placed;
-  discarded: Card[];
-}
-
-function newGame(): GameState {
+function newGame(): PracticeState {
   const deck = freshDeck();
   const hand = deck.splice(0, 5);
   return {
-    phase: "first",
+    phase: "first_turn",
     turnIdx: 1,
     deck,
     hand,
-    placed: emptyPlaced(),
+    committed: emptyBoard(),
     discarded: [],
   };
 }
@@ -83,83 +87,131 @@ export function Practice() {
   const navigate = useNavigate();
   const authed = useAuthStore((s) => !!s.accessToken);
 
-  const [g, setG] = useState<GameState>(() => newGame());
-  const [selectedHandIdx, setSelectedHandIdx] = useState<number | null>(null);
+  const [g, setG] = useState<PracticeState>(() => newGame());
+  const [selectedRow, setSelectedRow] = useState<Row | null>(null);
+  const [selectedCardIdx, setSelectedCardIdx] = useState<number | null>(null);
+  const [placed, setPlaced] = useState<PlacedSlot[]>([]);
 
-  const placedCount =
-    g.placed.top.length + g.placed.middle.length + g.placed.bottom.length;
-  const isFoul = isFoulBoard(g.placed.top, g.placed.middle, g.placed.bottom);
+  const placedIdxSet = useMemo(
+    () => new Set(placed.map((p) => p.handIdx)),
+    [placed],
+  );
 
-  const canAdvance =
-    g.phase === "first"
-      ? g.hand.length === 0 && placedCount === 5
-      : g.phase === "normal"
-        ? g.hand.length === 1 && placedCount === 5 + (g.turnIdx - 1) * 2
-        : false;
+  const pendingByRow = useMemo(() => {
+    const out: Record<Row, { card: Card; handIdx: number }[]> = {
+      top: [],
+      middle: [],
+      bottom: [],
+    };
+    for (const slot of placed) {
+      const card = g.hand[slot.handIdx];
+      if (card) out[slot.row].push({ card, handIdx: slot.handIdx });
+    }
+    return out;
+  }, [placed, g.hand]);
 
-  const toggleHandPick = (idx: number) => {
-    setSelectedHandIdx((cur) => (cur === idx ? null : idx));
+  const rowUsed = (row: Row): number =>
+    g.committed[row].length + pendingByRow[row].length;
+
+  const isMyTurn = g.phase !== "done";
+
+  const clearPending = () => {
+    setSelectedRow(null);
+    setSelectedCardIdx(null);
+    setPlaced([]);
   };
 
-  const placeIntoRow = (row: Row) => {
-    if (selectedHandIdx === null) return;
-    if (g.placed[row].length >= ROW_CAP[row]) {
-      toast.error("이 줄은 가득 찼습니다.");
+  const placePiece = (handIdx: number, row: Row) => {
+    if (placed.some((p) => p.handIdx === handIdx)) return;
+    setPlaced((cur) => [...cur, { handIdx, row }]);
+    setSelectedRow(row);
+    setSelectedCardIdx(null);
+  };
+
+  const unplace = (handIdx: number) => {
+    setPlaced((cur) => cur.filter((p) => p.handIdx !== handIdx));
+  };
+
+  const handleRowSelect = (row: Row) => {
+    if (!isMyTurn) return;
+    if (selectedCardIdx !== null) {
+      if (rowUsed(row) >= ROW_CAPACITY[row]) {
+        toast.error(`${row} 줄이 가득 찼습니다.`);
+        return;
+      }
+      placePiece(selectedCardIdx, row);
       return;
     }
-    setG((prev) => {
-      const card = prev.hand[selectedHandIdx];
-      if (!card) return prev;
-      const newHand = [...prev.hand];
-      newHand.splice(selectedHandIdx, 1);
-      return {
-        ...prev,
-        hand: newHand,
-        placed: { ...prev.placed, [row]: [...prev.placed[row], card] },
-      };
-    });
-    setSelectedHandIdx(null);
+    setSelectedRow(selectedRow === row ? null : row);
   };
 
-  const undoPlacement = (row: Row, idx: number) => {
-    if (g.phase === "done") return;
-    setG((prev) => {
-      const next = [...prev.placed[row]];
-      const [card] = next.splice(idx, 1);
-      return {
-        ...prev,
-        placed: { ...prev.placed, [row]: next },
-        hand: [...prev.hand, card],
-      };
-    });
-    setSelectedHandIdx(null);
+  const handleHandPlace = (idx: number) => {
+    if (!isMyTurn) return;
+    if (selectedRow !== null) {
+      if (rowUsed(selectedRow) >= ROW_CAPACITY[selectedRow]) {
+        toast.error(`${selectedRow} 줄이 가득 찼습니다.`);
+        return;
+      }
+      placePiece(idx, selectedRow);
+      return;
+    }
+    setSelectedCardIdx(selectedCardIdx === idx ? null : idx);
   };
 
-  const advanceTurn = () => {
-    if (!canAdvance) return;
+  const handlePendingClick = (handIdx: number) => unplace(handIdx);
+
+  const handleConfirm = () => {
+    if (!isMyTurn) return;
+    const phase = g.phase;
+    const placeReq = getRequiredPlace(phase);
+    const discardReq = getRequiredDiscard(phase, g.hand.length);
+    if (placed.length !== placeReq) {
+      toast.error(`${placeReq}장을 배치해야 합니다. (현재 ${placed.length}장)`);
+      return;
+    }
+    const missing = g.hand
+      .map((_, i) => i)
+      .filter((i) => !placedIdxSet.has(i));
+    if (missing.length !== discardReq) {
+      toast.error(`버려질 카드 수가 맞지 않습니다.`);
+      return;
+    }
+
+    // commit
     setG((prev) => {
-      // first → normal turn 2
-      if (prev.phase === "first") {
+      const newCommitted: Board = {
+        top: [...prev.committed.top],
+        middle: [...prev.committed.middle],
+        bottom: [...prev.committed.bottom],
+      };
+      for (const slot of placed) {
+        const card = prev.hand[slot.handIdx];
+        if (card) newCommitted[slot.row].push(card);
+      }
+      const newDiscarded =
+        phase === "normal_turn" && missing.length === 1
+          ? [...prev.discarded, prev.hand[missing[0]]]
+          : prev.discarded;
+
+      if (phase === "first_turn") {
         const newDeck = [...prev.deck];
         const dealt = newDeck.splice(0, 3);
         return {
           ...prev,
-          phase: "normal",
+          phase: "normal_turn",
           turnIdx: 2,
           deck: newDeck,
           hand: dealt,
+          committed: newCommitted,
         };
       }
-      // normal turn: 손에 남은 1장 → discard
-      const discardCard = prev.hand[0];
-      const newDiscarded = discardCard
-        ? [...prev.discarded, discardCard]
-        : prev.discarded;
+      // normal_turn
       if (prev.turnIdx >= 5) {
         return {
           ...prev,
           phase: "done",
           hand: [],
+          committed: newCommitted,
           discarded: newDiscarded,
         };
       }
@@ -170,58 +222,99 @@ export function Practice() {
         turnIdx: prev.turnIdx + 1,
         deck: newDeck,
         hand: dealt,
+        committed: newCommitted,
         discarded: newDiscarded,
       };
     });
-    setSelectedHandIdx(null);
+    clearPending();
   };
 
   const restart = () => {
     setG(newGame());
-    setSelectedHandIdx(null);
+    clearPending();
   };
 
-  const rowEval = (row: Row) => {
-    const cards = g.placed[row];
-    if (cards.length !== ROW_CAP[row]) return null;
-    const hv = evaluate(cards);
-    const royalty =
-      row === "top"
-        ? royaltyTop(cards, isFoul)
-        : row === "middle"
-          ? royaltyMiddle(cards, isFoul)
-          : royaltyBottom(cards, isFoul);
-    return { label: handLabel(hv), royalty };
-  };
+  // ── PlayerBoard에 넘길 mock PlayerState ──────────────────────────────
+  const isFoul =
+    g.phase === "done" &&
+    isFoulBoard(g.committed.top, g.committed.middle, g.committed.bottom);
 
-  const totalRoyalty =
-    g.phase === "done" && !isFoul
-      ? royaltyTop(g.placed.top, false) +
-        royaltyMiddle(g.placed.middle, false) +
-        royaltyBottom(g.placed.bottom, false)
-      : 0;
-  const flCards = g.phase === "done" && !isFoul
-    ? fantasyEntryCards(g.placed.top)
+  const evaluation = g.phase === "done"
+    ? {
+        top: {
+          rank: evaluate(g.committed.top).rank,
+          rank_label: "",
+          label: handLabel(evaluate(g.committed.top)),
+          royalty: royaltyTop(g.committed.top, isFoul),
+        },
+        middle: {
+          rank: evaluate(g.committed.middle).rank,
+          rank_label: "",
+          label: handLabel(evaluate(g.committed.middle)),
+          royalty: royaltyMiddle(g.committed.middle, isFoul),
+        },
+        bottom: {
+          rank: evaluate(g.committed.bottom).rank,
+          rank_label: "",
+          label: handLabel(evaluate(g.committed.bottom)),
+          royalty: royaltyBottom(g.committed.bottom, isFoul),
+        },
+        is_foul: isFoul,
+        total_royalty:
+          royaltyTop(g.committed.top, isFoul) +
+          royaltyMiddle(g.committed.middle, isFoul) +
+          royaltyBottom(g.committed.bottom, isFoul),
+      }
     : null;
 
+  const me: PlayerState = {
+    player_id: "self",
+    board: {
+      top: g.committed.top,
+      middle: g.committed.middle,
+      bottom: g.committed.bottom,
+      top_count: g.committed.top.length,
+      middle_count: g.committed.middle.length,
+      bottom_count: g.committed.bottom.length,
+    },
+    hand: g.hand,
+    hand_count: g.hand.length,
+    score: 0,
+    is_fantasy: false,
+    next_fantasy_cards:
+      g.phase === "done" && !isFoul ? fantasyEntryCards(g.committed.top) : null,
+    evaluation,
+    last_round_delta: null,
+  };
+
   const phaseLabel =
-    g.phase === "first"
+    g.phase === "first_turn"
       ? "1턴 — 5장 모두 배치"
-      : g.phase === "normal"
-        ? `${g.turnIdx}턴 — 2장 배치 후 다음 턴 (1장 자동 버림)`
+      : g.phase === "normal_turn"
+        ? `${g.turnIdx}턴 — 2장 배치, 1장은 자동 버림`
         : "라운드 종료";
 
+  const totalRoyalty = evaluation?.total_royalty ?? 0;
+  const flCards = me.next_fantasy_cards;
+
   return (
-    <div className="min-h-screen bg-slate-100 p-4 pb-12">
-      <header className="max-w-3xl mx-auto flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
+      <header className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => navigate(authed ? "/" : "/login")}
-          className="text-sm text-slate-600 hover:text-slate-900"
+          className="text-xs text-slate-500 hover:underline"
         >
           ← {authed ? "로비" : "로그인"}
         </button>
-        <h1 className="text-xl font-bold">연습 모드</h1>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="font-semibold">{phaseLabel}</span>
+          <span className="text-slate-400">·</span>
+          <span className="text-slate-500 text-xs">
+            진행 {g.committed.top.length + g.committed.middle.length + g.committed.bottom.length}/13
+            · 버림 {g.discarded.length}/4
+          </span>
+        </div>
         <button
           type="button"
           onClick={restart}
@@ -231,62 +324,46 @@ export function Practice() {
         </button>
       </header>
 
-      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-4 mb-3">
-        <div className="flex items-center justify-between mb-3 text-sm">
-          <span className="font-semibold">{phaseLabel}</span>
-          <span className="text-slate-500">
-            진행 {placedCount}/13 · 버림 {g.discarded.length}/4
-          </span>
+      <section className="flex justify-center">
+        <ActionBar
+          phase={g.phase}
+          isMyTurn={isMyTurn}
+          hasPending={
+            placed.length > 0 || selectedRow !== null || selectedCardIdx !== null
+          }
+          onConfirm={handleConfirm}
+          onCancel={clearPending}
+        />
+      </section>
+
+      <section className="flex justify-center">
+        <Hand
+          hand={g.hand}
+          placedIdxSet={placedIdxSet}
+          enabled={isMyTurn}
+          selectedIdx={selectedCardIdx}
+          onPlace={handleHandPlace}
+          onUnplace={unplace}
+        />
+      </section>
+
+      <main className="flex-1 flex flex-col items-center gap-3">
+        <div className="w-full max-w-md">
+          <PlayerBoard
+            player={me}
+            label="연습"
+            isMe={true}
+            isCurrent={isMyTurn}
+            isDealer={false}
+            pendingByRow={pendingByRow}
+            selectedRow={selectedRow}
+            onRowSelect={isMyTurn ? handleRowSelect : undefined}
+            onPendingClick={handlePendingClick}
+          />
         </div>
 
-        {ROWS.map((row) => {
-          const cards = g.placed[row];
-          const empty = Math.max(0, ROW_CAP[row] - cards.length);
-          const ev = rowEval(row);
-          const slotClickable = selectedHandIdx !== null && empty > 0;
-          return (
-            <div key={row} className="flex flex-col gap-1 mb-2">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span className="font-mono">{ROW_LABEL[row]}</span>
-                {ev && (
-                  <span>
-                    <span className="text-slate-700 font-semibold">
-                      {ev.label}
-                    </span>
-                    {ev.royalty > 0 && (
-                      <span className="ml-2 text-emerald-700 font-semibold">
-                        +{ev.royalty}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-center gap-1">
-                {cards.map((c, i) => (
-                  <CardView
-                    key={`${row}-${i}-${cardKey(c)}`}
-                    card={c}
-                    size="md"
-                    onClick={
-                      g.phase === "done" ? undefined : () => undoPlacement(row, i)
-                    }
-                  />
-                ))}
-                {Array.from({ length: empty }).map((_, i) => (
-                  <EmptySlot
-                    key={`${row}-e-${i}`}
-                    size="md"
-                    highlighted={slotClickable}
-                    onClick={slotClickable ? () => placeIntoRow(row) : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-
         {g.phase === "done" && (
-          <div className="flex items-center justify-center gap-3 text-sm pt-3 mt-1 border-t border-slate-200">
+          <div className="w-full max-w-md bg-white rounded-lg shadow p-3 flex items-center justify-center gap-3 text-sm">
             {isFoul ? (
               <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded font-bold">
                 FOUL — Royalty 0
@@ -301,65 +378,25 @@ export function Practice() {
                 </span>
                 {flCards != null && (
                   <span className="px-2 py-0.5 bg-fuchsia-100 text-fuchsia-700 rounded font-semibold">
-                    FantasyLand 자격 — 다음 라운드 {flCards}장
+                    FantasyLand 자격 — {flCards}장
                   </span>
                 )}
               </>
             )}
           </div>
         )}
-      </div>
 
-      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-4 mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-slate-500">
-            {g.phase === "done"
-              ? "라운드 종료. '새 라운드'를 눌러 다시 시작."
-              : "내 카드 — 클릭해 선택 후 위의 빈 슬롯에 배치"}
-          </span>
-          {g.phase !== "done" && (
-            <button
-              type="button"
-              onClick={advanceTurn}
-              disabled={!canAdvance}
-              className="text-sm px-3 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
-            >
-              {g.phase === "first"
-                ? "1턴 확정"
-                : g.turnIdx >= 5
-                  ? "라운드 종료"
-                  : "다음 턴"}
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap justify-center gap-1 min-h-[5rem]">
-          {g.hand.length === 0 && g.phase !== "done" && (
-            <span className="text-slate-400 text-sm self-center">
-              (배치 완료 — '{g.phase === "first" ? "1턴 확정" : "다음 턴"}' 클릭)
-            </span>
-          )}
-          {g.hand.map((c, i) => (
-            <CardView
-              key={`hand-${i}-${cardKey(c)}`}
-              card={c}
-              size="md"
-              selected={selectedHandIdx === i}
-              onClick={() => toggleHandPick(i)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {g.discarded.length > 0 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-3">
-          <div className="text-xs text-slate-500 mb-1">버린 카드</div>
-          <div className="flex flex-wrap justify-center gap-1">
-            {g.discarded.map((c, i) => (
-              <CardView key={`d-${i}-${cardKey(c)}`} card={c} size="sm" faded />
-            ))}
+        {g.discarded.length > 0 && (
+          <div className="w-full max-w-md bg-white rounded-lg shadow p-3">
+            <div className="text-xs text-slate-500 mb-1">버린 카드</div>
+            <div className="flex flex-wrap justify-center gap-1">
+              {g.discarded.map((c, i) => (
+                <CardView key={`d-${i}-${c.rank}-${c.suit}`} card={c} size="sm" faded />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
