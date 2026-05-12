@@ -32,6 +32,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 # 앱 소스 복사
 COPY app ./app
 COPY scripts ./scripts
+# Alembic — 배포 시 컨테이너 안에서 마이그레이션 실행 가능하도록 포함.
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 # 프로젝트 자체 설치
 RUN uv sync --frozen --no-dev
