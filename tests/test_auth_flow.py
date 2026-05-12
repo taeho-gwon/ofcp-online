@@ -145,3 +145,40 @@ async def test_refresh_rejects_access_token(
     access = jwt_lib.issue_access(user.id)
     resp = await client.post("/api/auth/refresh", json={"refresh_token": access})
     assert resp.status_code == 401
+
+
+async def test_dev_login_disabled_by_default(client: AsyncClient):
+    resp = await client.post("/api/auth/dev-login", json={"nickname": "alice"})
+    assert resp.status_code == 404
+
+
+async def test_dev_login_creates_user_when_enabled(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "dev_auth_enabled", True)
+    resp = await client.post("/api/auth/dev-login", json={"nickname": "devalice"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user"]["nickname"] == "devalice"
+    assert body["tokens"]["access_token"]
+
+
+async def test_dev_login_reuses_existing_user(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "dev_auth_enabled", True)
+    user = User(google_sub="dev:bob", email="bob@dev.local", nickname="bob")
+    db_session.add(user)
+    await db_session.commit()
+
+    resp = await client.post("/api/auth/dev-login", json={"nickname": "bob"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user"]["nickname"] == "bob"

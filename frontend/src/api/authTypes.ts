@@ -26,6 +26,11 @@ export interface SignupResponse {
   user: UserOut;
 }
 
+export interface DevLoginResponse {
+  tokens: TokenPair;
+  user: UserOut;
+}
+
 export interface NicknameAvailability {
   available: boolean;
 }

@@ -70,14 +70,14 @@ export function Room() {
 
   if (!code) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
+      <div className="min-h-screen flex items-center justify-center text-slate-500 pb-12">
         잘못된 방 링크입니다.
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col items-center">
+    <div className="min-h-screen bg-slate-100 p-4 flex flex-col items-center pb-12">
       <div className="w-full max-w-md bg-white rounded-lg shadow p-5 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <button

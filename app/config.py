@@ -20,5 +20,9 @@ class Settings(BaseSettings):
     # Google OAuth
     google_client_id: str = ""
 
+    # dev 환경 전용. 활성화 시 /api/auth/dev-login 노출 — 닉네임만으로 로그인.
+    # 운영에서는 절대 true로 두지 말 것.
+    dev_auth_enabled: bool = False
+
 
 settings = Settings()

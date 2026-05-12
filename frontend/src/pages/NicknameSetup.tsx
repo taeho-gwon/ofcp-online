@@ -110,7 +110,7 @@ export function NicknameSetup() {
   const canSubmit = format === "valid" && remote === "available" && !submitting;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 pb-12">
       <div className="w-full max-w-sm bg-white rounded-lg shadow p-6 flex flex-col gap-4">
         <h1 className="text-xl font-bold">닉네임 설정</h1>
         {signupEmail && (

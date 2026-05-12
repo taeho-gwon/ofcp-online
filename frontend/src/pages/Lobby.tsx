@@ -45,7 +45,7 @@ export function Lobby() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-slate-100 p-4">
+    <div className="min-h-screen flex flex-col items-center bg-slate-100 p-4 pb-12">
       <header className="w-full max-w-md flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">OFC Online</h1>
         <div className="text-xs flex items-center gap-2">
@@ -140,18 +140,22 @@ export function Lobby() {
           </button>
         </section>
 
-        <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-2 opacity-60">
-          <div className="text-xs text-slate-400">곧 추가</div>
-          <div className="grid grid-cols-3 gap-2 text-sm text-slate-500">
-            <div className="px-3 py-2 rounded border border-slate-200 text-center">
+        <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/history")}
+              className="px-3 py-2 rounded border border-slate-300 text-slate-800 hover:bg-slate-50"
+            >
+              내 기록
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/practice")}
+              className="px-3 py-2 rounded border border-slate-300 text-slate-800 hover:bg-slate-50"
+            >
               연습 모드
-            </div>
-            <div className="px-3 py-2 rounded border border-slate-200 text-center">
-              랭킹
-            </div>
-            <div className="px-3 py-2 rounded border border-slate-200 text-center">
-              기록
-            </div>
+            </button>
           </div>
         </section>
       </div>

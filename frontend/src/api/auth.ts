@@ -1,4 +1,5 @@
 import type {
+  DevLoginResponse,
   GoogleLoginResponse,
   NicknameAvailability,
   SignupResponse,
@@ -40,6 +41,17 @@ export function changeNickname(nickname: string): Promise<UserOut> {
     method: "PATCH",
     body: JSON.stringify({ nickname }),
   });
+}
+
+export function devLogin(nickname: string): Promise<DevLoginResponse> {
+  return apiFetch<DevLoginResponse>(
+    "/api/auth/dev-login",
+    {
+      method: "POST",
+      body: JSON.stringify({ nickname }),
+    },
+    { auth: false },
+  );
 }
 
 export function checkNickname(nickname: string): Promise<NicknameAvailability> {

@@ -1,11 +1,16 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
+import { Footer } from "./components/Footer";
 import { RequireAuth } from "./components/RequireAuth";
+import { About } from "./pages/About";
 import { Game } from "./pages/Game";
+import { History } from "./pages/History";
 import { Lobby } from "./pages/Lobby";
 import { Login } from "./pages/Login";
 import { NicknameSetup } from "./pages/NicknameSetup";
+import { Practice } from "./pages/Practice";
+import { Replay } from "./pages/Replay";
 import { Room } from "./pages/Room";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -18,6 +23,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/nickname-setup" element={<NicknameSetup />} />
+          <Route path="/practice" element={<Practice />} />
+          <Route path="/about" element={<About />} />
           <Route
             path="/"
             element={
@@ -42,7 +49,24 @@ function App() {
               </RequireAuth>
             }
           />
+          <Route
+            path="/history"
+            element={
+              <RequireAuth>
+                <History />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/replay/:gameId"
+            element={
+              <RequireAuth>
+                <Replay />
+              </RequireAuth>
+            }
+          />
         </Routes>
+        <Footer />
       </BrowserRouter>
     </GoogleOAuthProvider>
   );

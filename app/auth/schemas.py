@@ -37,3 +37,12 @@ class SignupResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class DevLoginRequest(BaseModel):
+    nickname: str = Field(min_length=2, max_length=16)
+
+
+class DevLoginResponse(BaseModel):
+    tokens: TokenPair
+    user: UserOut

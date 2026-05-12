@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import jwt as jwt_lib
 from app.auth.oauth import GoogleAuthError, verify_google_id_token
 from app.auth.schemas import (
+    DevLoginRequest,
+    DevLoginResponse,
     GoogleLoginRequest,
     GoogleLoginResponse,
     RefreshRequest,
@@ -13,6 +15,7 @@ from app.auth.schemas import (
     SignupResponse,
     TokenPair,
 )
+from app.config import settings
 from app.core.db import get_session
 from app.users import repository as users_repo
 from app.users import service as users_service
@@ -109,3 +112,35 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="유저를 찾을 수 없습니다."
         )
     return _issue_pair(user.id)
+
+
+@router.post("/dev-login", response_model=DevLoginResponse)
+async def dev_login(
+    payload: DevLoginRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> DevLoginResponse:
+    """dev 환경에서 닉네임만으로 user 생성/재로그인. dev_auth_enabled 가드."""
+    if not settings.dev_auth_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+    existing = await users_repo.get_by_nickname(session, payload.nickname)
+    if existing is not None:
+        return DevLoginResponse(
+            tokens=_issue_pair(existing.id), user=UserOut.model_validate(existing)
+        )
+
+    try:
+        user = await users_service.create_user(
+            session,
+            google_sub=f"dev:{payload.nickname}",
+            email=f"{payload.nickname}@dev.local",
+            nickname=payload.nickname,
+        )
+    except users_service.NicknameError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    await session.commit()
+    return DevLoginResponse(
+        tokens=_issue_pair(user.id), user=UserOut.model_validate(user)
+    )

@@ -87,6 +87,33 @@ async def list_events(session: AsyncSession, game_id: str) -> list[GameEvent]:
     return list((await session.execute(stmt)).scalars().all())
 
 
+async def list_games_for_user(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    limit: int,
+    offset: int,
+) -> list[Game]:
+    stmt = (
+        select(Game)
+        .join(GamePlayer, GamePlayer.game_id == Game.id)
+        .where(GamePlayer.user_id == user_id)
+        .order_by(Game.started_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def list_players(session: AsyncSession, game_id: str) -> list[GamePlayer]:
+    stmt = (
+        select(GamePlayer)
+        .where(GamePlayer.game_id == game_id)
+        .order_by(GamePlayer.seat_idx)
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
 async def increment_round_count(session: AsyncSession, game_id: str) -> None:
     await session.execute(
         update(Game).where(Game.id == game_id).values(round_count=Game.round_count + 1)

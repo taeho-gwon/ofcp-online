@@ -233,7 +233,7 @@ export function Game() {
 
   if (!gameId || !playerId) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
+      <div className="min-h-screen flex items-center justify-center text-slate-500 pb-12">
         잘못된 게임 링크입니다.
       </div>
     );
@@ -241,7 +241,7 @@ export function Game() {
   const playersMeta = gameState?.players_meta;
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3">
+    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
       <header className="flex items-center justify-between">
         <button
           type="button"
