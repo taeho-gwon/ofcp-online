@@ -9,9 +9,11 @@ import type {
   PlayerState,
 } from "../api/types";
 import { CardView } from "../components/Card";
+import { PageHeader } from "../components/PageHeader";
 import { PlayerBoard } from "../components/PlayerBoard";
 import { ResultModal } from "../components/ResultModal";
 import { TutorialOverlay } from "../components/TutorialOverlay";
+import { Button } from "../components/ui";
 import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
   handLabel,
@@ -36,15 +38,23 @@ interface Board {
 
 const empty = (): Board => ({ top: [], middle: [], bottom: [] });
 
-// FL은 1턴이므로 step 4개로 충분: intro / fl_hand / fl_placed / result
-type FlStep = "intro" | "hand" | "placed" | "result";
+// FL 플레이어는 1턴에 끝나지만, 일반 플레이어(상대)는 5턴 진행.
+// 시각적으로 "FL이 먼저 끝남 → 일반 플레이어가 따라잡음 → 결과 비교" 순서로 보여준다.
+type FlStep = "intro" | "hand" | "placed" | "opp_done" | "result";
 
-const STEP_SEQUENCE: FlStep[] = ["intro", "hand", "placed", "result"];
+const STEP_SEQUENCE: FlStep[] = [
+  "intro",
+  "hand",
+  "placed",
+  "opp_done",
+  "result",
+];
 
 const BUBBLE_OF_STEP: Record<FlStep, FantasyBubbleKey> = {
   intro: "intro",
   hand: "fl_hand",
   placed: "fl_placed",
+  opp_done: "opp_done",
   result: "result",
 };
 
@@ -148,15 +158,20 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
     evaluation: isResult ? buildEvaluation(myBoard) : null,
     last_round_delta: myDelta,
   };
+  // FL이 먼저 끝나는 흐름을 살리기 위해, 상대는 opp_done/result 단계에서만 보드를 노출한다.
+  const oppShown = step === "opp_done" || step === "result";
+  const oppBoardCards = oppShown
+    ? scenario.opponent.board
+    : { top: [] as Card[], middle: [] as Card[], bottom: [] as Card[] };
   const opp: PlayerState = {
     player_id: BOT_ID,
     board: {
-      top: scenario.opponent.board.top,
-      middle: scenario.opponent.board.middle,
-      bottom: scenario.opponent.board.bottom,
-      top_count: 3,
-      middle_count: 5,
-      bottom_count: 5,
+      top: oppBoardCards.top,
+      middle: oppBoardCards.middle,
+      bottom: oppBoardCards.bottom,
+      top_count: oppBoardCards.top.length,
+      middle_count: oppBoardCards.middle.length,
+      bottom_count: oppBoardCards.bottom.length,
     },
     hand: [],
     hand_count: 0,
@@ -188,29 +203,30 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
   const bubbleText = scenario.bubbles[BUBBLE_OF_STEP[step]];
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
-      <header className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate("/tutorial")}
-          className="text-xs text-slate-500 hover:underline"
-        >
-          ← 튜토리얼 목록
-        </button>
-        <div className="text-sm font-semibold">{scenario.title}</div>
-        <button
-          type="button"
-          onClick={skip}
-          className="text-xs text-slate-500 hover:underline"
-        >
-          건너뛰기
-        </button>
-      </header>
+    <div className="min-h-screen p-4 flex flex-col gap-3 pb-12">
+      <PageHeader
+        back={{ label: "← 튜토리얼 목록", to: "/tutorial" }}
+        title={
+          <div style={{ fontSize: "var(--fs-body-sm)", fontWeight: 600 }}>
+            {scenario.title}
+          </div>
+        }
+        rightActions={
+          <Button type="button" variant="ghost" size="sm" onClick={skip}>
+            건너뛰기
+          </Button>
+        }
+      />
 
       <section className="flex flex-col items-center gap-1 min-h-[6rem]">
         {myHand.length > 0 ? (
           <>
-            <div className="text-xs text-slate-500">
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+              }}
+            >
               FL 손패 (14장 — 13장 배치 + 1장 버림)
             </div>
             <div className="flex flex-wrap justify-center gap-1">
@@ -220,7 +236,12 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
             </div>
           </>
         ) : (
-          <div className="text-xs text-slate-400">
+          <div
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-tertiary)",
+            }}
+          >
             {step === "intro"
               ? "FantasyLand 라운드 시작 전"
               : step === "placed"
@@ -242,7 +263,14 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
             isDealer={false}
           />
         </div>
-        <div className="text-xs text-slate-400">vs (★ FantasyLand)</div>
+        <div
+          style={{
+            fontSize: "var(--fs-caption)",
+            color: "var(--text-tertiary)",
+          }}
+        >
+          vs (★ FantasyLand)
+        </div>
         <div className="w-full max-w-md">
           <PlayerBoard
             player={me}
@@ -254,8 +282,19 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
         </div>
 
         {myDiscarded.length > 0 && (
-          <div className="w-full max-w-md bg-white rounded-lg shadow p-3">
-            <div className="text-xs text-slate-500 mb-1">버린 카드</div>
+          <div
+            className="card"
+            style={{ maxWidth: 448, width: "100%", padding: 12 }}
+          >
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+                marginBottom: 4,
+              }}
+            >
+              버린 카드
+            </div>
             <div className="flex flex-wrap justify-center gap-1">
               {myDiscarded.map((c, i) => (
                 <CardView

@@ -22,7 +22,7 @@ async function _fetch(url: string, init: RequestInit, withAuth: boolean) {
   return fetch(url, { ...init, headers });
 }
 
-async function _refresh(): Promise<boolean> {
+export async function refreshTokens(): Promise<boolean> {
   const refresh = useAuthStore.getState().refreshToken;
   if (!refresh) return false;
   const res = await fetch("/api/auth/refresh", {
@@ -48,7 +48,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   let res = await _fetch(url, init, auth);
   if (res.status === 401 && auth) {
-    const ok = await _refresh();
+    const ok = await refreshTokens();
     if (ok) {
       res = await _fetch(url, init, true);
     }

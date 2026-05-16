@@ -56,7 +56,9 @@ export function useMatchupAnimation(
   onDone: () => void,
 ): AnimationState {
   const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   const matchupsKey = useMemo(
     () => (matchups ? matchups.map((m) => `${m.a_id}-${m.b_id}`).join(",") : ""),
@@ -65,11 +67,14 @@ export function useMatchupAnimation(
 
   const steps = useMemo(() => (matchups ? buildSteps(matchups) : []), [matchups]);
 
+  // matchups가 바뀌면 stepIdx를 0으로 리셋한다.
+  // React 권장 "derived state" 패턴 — render 중 prev key 변경 감지 시 setState.
+  const [lastKey, setLastKey] = useState(matchupsKey);
   const [stepIdx, setStepIdx] = useState(0);
-
-  useEffect(() => {
+  if (lastKey !== matchupsKey) {
+    setLastKey(matchupsKey);
     setStepIdx(0);
-  }, [matchupsKey]);
+  }
 
   useEffect(() => {
     if (!matchups) return; // 결과 phase 아님

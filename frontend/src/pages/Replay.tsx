@@ -8,7 +8,9 @@ import {
   type GameEventOut,
   type RoundEndPayload,
 } from "../api/records";
+import { PageHeader } from "../components/PageHeader";
 import { ReplayBoard } from "../components/ReplayBoard";
+import { Button } from "../components/ui";
 
 const RULESET_LABEL: Record<string, string> = {
   pineapple: "12라운드",
@@ -19,6 +21,13 @@ interface RoundView {
   seq: number;
   payload: RoundEndPayload;
 }
+
+const mutedTextStyle = {
+  fontSize: "var(--fs-body-sm)",
+  color: "var(--text-tertiary)",
+};
+
+const labelStyle = { color: "var(--text-tertiary)" };
 
 export function Replay() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -42,22 +51,26 @@ export function Replay() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500 pb-12">
+      <div
+        className="min-h-screen flex items-center justify-center pb-12"
+        style={mutedTextStyle}
+      >
         불러오는 중...
       </div>
     );
   }
   if (!detail || !rounds) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-100 gap-2 pb-12">
-        <span className="text-slate-500">기록이 없습니다.</span>
-        <button
+      <div className="min-h-screen flex flex-col items-center justify-center gap-2 pb-12">
+        <span style={mutedTextStyle}>기록이 없습니다.</span>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => navigate("/history")}
-          className="text-sm text-emerald-700 underline"
         >
           기록 목록으로
-        </button>
+        </Button>
       </div>
     );
   }
@@ -69,45 +82,57 @@ export function Replay() {
     .map((p) => p.user_id);
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 pb-12">
-      <header className="max-w-4xl mx-auto flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={() => navigate("/history")}
-          className="text-sm text-slate-600 hover:text-slate-900"
-        >
-          ← 기록 목록
-        </button>
-        <h1 className="text-xl font-bold">리플레이</h1>
-        <span className="w-20" />
-      </header>
+    <div className="min-h-screen p-4 pb-12">
+      <PageHeader
+        title="리플레이"
+        back={{ label: "← 기록 목록", to: "/history" }}
+        maxWidth={896}
+      />
 
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-4 mb-4">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-          <span className="text-slate-500">규칙</span>
-          <span className="font-semibold">
+      <div className="card mx-auto mb-4" style={{ maxWidth: 896 }}>
+        <div
+          className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+          style={{ fontSize: "var(--fs-body-sm)" }}
+        >
+          <span style={labelStyle}>규칙</span>
+          <span style={{ fontWeight: 600 }}>
             {RULESET_LABEL[detail.ruleset] ?? detail.ruleset}
           </span>
-          <span className="text-slate-500">·</span>
-          <span className="text-slate-500">라운드</span>
-          <span className="font-semibold">{detail.round_count}</span>
+          <span style={labelStyle}>·</span>
+          <span style={labelStyle}>라운드</span>
+          <span style={{ fontWeight: 600 }}>{detail.round_count}</span>
           {detail.ended_at && (
             <>
-              <span className="text-slate-500">·</span>
-              <span className="text-slate-500">
+              <span style={labelStyle}>·</span>
+              <span style={labelStyle}>
                 {new Date(detail.ended_at).toLocaleString()}
               </span>
             </>
           )}
         </div>
-        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+        <div
+          className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2"
+          style={{ fontSize: "var(--fs-body-sm)" }}
+        >
           {detail.players.map((p) => (
             <div
               key={p.user_id}
-              className="flex items-center justify-between bg-slate-50 rounded px-3 py-1.5"
+              className="flex items-center justify-between"
+              style={{
+                background: "var(--bg-sunken)",
+                borderRadius: "var(--radius-md)",
+                padding: "6px 12px",
+              }}
             >
-              <span className="font-semibold truncate">{p.nickname}</span>
-              <span className="font-mono text-slate-700">
+              <span style={{ fontWeight: 600 }} className="truncate">
+                {p.nickname}
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 {p.final_score ?? "-"}
               </span>
             </div>
@@ -117,21 +142,39 @@ export function Replay() {
 
       <div className="max-w-4xl mx-auto flex flex-col gap-3">
         {rounds.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-slate-500 text-sm">
+          <div
+            className="card"
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: "var(--text-tertiary)",
+              fontSize: "var(--fs-body-sm)",
+            }}
+          >
             완료된 라운드가 없습니다.
           </div>
         )}
         {rounds.map((r, idx) => (
           <section
             key={r.seq}
-            className="bg-white rounded-lg shadow p-3 flex flex-col gap-2"
+            className="card"
+            style={{ padding: 12, gap: 8 }}
           >
-            <header className="flex items-center justify-between text-sm">
-              <span className="font-semibold">
+            <header
+              className="flex items-center justify-between"
+              style={{ fontSize: "var(--fs-body-sm)" }}
+            >
+              <span style={{ fontWeight: 600 }}>
                 {r.payload.is_bonus_round
                   ? `R${r.payload.round_number} 보너스`
                   : `R${r.payload.round_number}`}
-                <span className="text-slate-400 text-xs ml-2">
+                <span
+                  style={{
+                    color: "var(--text-tertiary)",
+                    fontSize: "var(--fs-caption)",
+                    marginLeft: 8,
+                  }}
+                >
                   ({idx + 1}번째)
                 </span>
               </span>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { checkNickname, signup } from "../api/auth";
 import { ApiError } from "../api/client";
+import { Button, Input } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
 const NICKNAME_RE = /^[\w가-힣]{2,16}$/u;
@@ -93,50 +94,76 @@ export function NicknameSetup() {
     if (format === "invalid")
       return {
         text: "2~16자의 한글/영문/숫자/_ 조합",
-        color: "text-amber-600",
+        color: "var(--warning)",
       };
     switch (remote) {
       case "checking":
-        return { text: "확인 중...", color: "text-slate-500" };
+        return { text: "확인 중...", color: "var(--text-tertiary)" };
       case "available":
-        return { text: "사용 가능", color: "text-emerald-600" };
+        return { text: "사용 가능", color: "var(--success)" };
       case "taken":
-        return { text: "이미 사용 중", color: "text-red-600" };
+        return { text: "이미 사용 중", color: "var(--danger)" };
       default:
         return null;
     }
   })();
 
   const canSubmit = format === "valid" && remote === "available" && !submitting;
+  const inputError = format === "invalid" || remote === "taken";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 pb-12">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow p-6 flex flex-col gap-4">
-        <h1 className="text-xl font-bold">닉네임 설정</h1>
-        {signupEmail && (
-          <div className="text-xs text-slate-500">{signupEmail}</div>
-        )}
-        <input
-          autoFocus
-          type="text"
-          value={nickname}
-          maxLength={16}
-          onChange={(e) => setNickname(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && canSubmit) handleSubmit();
+    <div className="min-h-screen flex items-center justify-center p-4 pb-12">
+      <div
+        className="card flex flex-col gap-4"
+        style={{ maxWidth: 360, width: "100%" }}
+      >
+        <h1
+          style={{
+            fontSize: "var(--fs-h3)",
+            fontWeight: 700,
+            letterSpacing: "var(--tracking-tight)",
+            margin: 0,
           }}
-          placeholder="닉네임"
-          className="px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
-        {hint && <div className={`text-xs ${hint.color}`}>{hint.text}</div>}
-        <button
+        >
+          닉네임 설정
+        </h1>
+        {signupEmail && (
+          <div
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-tertiary)",
+            }}
+          >
+            {signupEmail}
+          </div>
+        )}
+        <div className="field">
+          <Input
+            autoFocus
+            type="text"
+            value={nickname}
+            maxLength={16}
+            onChange={(e) => setNickname(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmit) handleSubmit();
+            }}
+            placeholder="닉네임"
+            error={inputError}
+          />
+          {hint && (
+            <span className="field-hint" style={{ color: hint.color }}>
+              {hint.text}
+            </span>
+          )}
+        </div>
+        <Button
           type="button"
+          variant="primary"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300"
         >
           {submitting ? "가입 중..." : "가입 완료"}
-        </button>
+        </Button>
       </div>
     </div>
   );

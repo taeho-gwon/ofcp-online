@@ -1,0 +1,108 @@
+/* =============================================================
+   OFC Online — Design Tokens (Slate, light only)
+   ============================================================= */
+
+:root {
+  /* ---- Type ---- */
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system,
+    BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: "Pretendard Variable", Pretendard, sans-serif;
+
+  --fs-micro: 11px;
+  --fs-caption: 12px;
+  --fs-body-sm: 13px;
+  --fs-body: 14px;
+  --fs-body-lg: 16px;
+  --fs-h3: 18px;
+  --fs-h2: 22px;
+  --fs-h1: 28px;
+  --fs-display: 36px;
+  --fs-display-lg: 48px;
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+  --lh-relaxed: 1.7;
+
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.08em;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ---- Duration ---- */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Light (default) ---- */
+  --bg-canvas: #f3f5f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #eef1f5;
+  --bg-overlay: rgba(15, 23, 42, 0.55);
+
+  --border-subtle: #e6eaf0;
+  --border-default: #d3dae3;
+  --border-strong: #b6c0cc;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #8a96a8;
+  --text-disabled: #b6bfca;
+  --text-inverse: #ffffff;
+  --text-on-accent: #ffffff;
+
+  --accent: #127a4f;
+  --accent-hover: #0e6541;
+  --accent-active: #0a4f33;
+  --accent-soft: #d4ecdd;
+  --accent-soft-text: #0c543a;
+  --accent-border: #1f9d6a;
+  --accent-ring: rgba(18, 122, 79, 0.28);
+
+  --info: #2563eb;
+  --info-soft: #e0e9ff;
+  --success: #16a06b;
+  --success-soft: #dcf3e8;
+  --warning: #c97b15;
+  --warning-soft: #fcefda;
+  --danger: #d6364c;
+  --danger-soft: #fde2e6;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 6px 14px rgba(15, 23, 42, 0.08),
+    0 2px 4px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 18px 40px rgba(15, 23, 42, 0.12),
+    0 4px 10px rgba(15, 23, 42, 0.06);
+  --shadow-xl: 0 32px 80px rgba(15, 23, 42, 0.18);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}

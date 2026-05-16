@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { devLogin, googleLogin } from "../api/auth";
+import { Alert, Badge, Button, Field, Input } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
 const DEV_AUTH_ENABLED = import.meta.env.VITE_DEV_AUTH === "true";
@@ -60,14 +61,33 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 pb-12">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow p-6 flex flex-col gap-6 items-center">
-        <h1 className="text-2xl font-bold">OFC Online</h1>
-        <p className="text-sm text-slate-600 text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 pb-12">
+      <div
+        className="card flex flex-col gap-6 items-center"
+        style={{ maxWidth: 360, width: "100%" }}
+      >
+        <h1
+          style={{
+            fontSize: "var(--fs-h2)",
+            fontWeight: 700,
+            letterSpacing: "var(--tracking-tight)",
+            margin: 0,
+          }}
+        >
+          OFC Online
+        </h1>
+        <p
+          style={{
+            fontSize: "var(--fs-body-sm)",
+            color: "var(--text-secondary)",
+            textAlign: "center",
+            margin: 0,
+          }}
+        >
           Google 계정으로 로그인합니다.
         </p>
         {loading ? (
-          <div className="text-sm text-slate-500">로그인 중...</div>
+          <Badge>로그인 중...</Badge>
         ) : (
           <GoogleLogin
             onSuccess={(cred) => {
@@ -81,39 +101,54 @@ export function Login() {
           />
         )}
         {DEV_AUTH_ENABLED && (
-          <div className="w-full border-t border-slate-200 pt-4 flex flex-col gap-2">
-            <div className="text-xs text-amber-700 font-semibold text-center">
-              ⚠ DEV 모드 — 닉네임만으로 로그인
-            </div>
-            <input
-              type="text"
-              value={devNickname}
-              maxLength={16}
-              onChange={(e) => setDevNickname(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleDevLogin();
-              }}
-              placeholder="닉네임 (2~16자)"
-              className="px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <button
+          <div
+            className="w-full flex flex-col gap-3"
+            style={{
+              borderTop: "1px solid var(--border-subtle)",
+              paddingTop: 16,
+            }}
+          >
+            <Alert tone="warning" title="DEV 모드">
+              닉네임만으로 로그인합니다.
+            </Alert>
+            <Field>
+              <Input
+                type="text"
+                value={devNickname}
+                maxLength={16}
+                onChange={(e) => setDevNickname(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleDevLogin();
+                }}
+                placeholder="닉네임 (2~16자)"
+              />
+            </Field>
+            <Button
               type="button"
+              variant="primary"
               onClick={handleDevLogin}
               disabled={devLoading}
-              className="px-3 py-2 rounded bg-amber-600 text-white text-sm hover:bg-amber-700 disabled:bg-slate-300"
             >
               {devLoading ? "로그인 중..." : "dev 로그인"}
-            </button>
+            </Button>
           </div>
         )}
-        <div className="w-full border-t border-slate-200 pt-4 text-center">
-          <button
+        <div
+          className="w-full"
+          style={{
+            borderTop: "1px solid var(--border-subtle)",
+            paddingTop: 16,
+            textAlign: "center",
+          }}
+        >
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => navigate("/practice")}
-            className="text-sm text-slate-600 underline hover:text-slate-900"
           >
             로그인 없이 연습 모드 →
-          </button>
+          </Button>
         </div>
       </div>
     </div>

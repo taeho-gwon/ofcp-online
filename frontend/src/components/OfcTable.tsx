@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Card, GameState, PlayerState, Row, WsClientMsg } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
 import { isFoulBoard } from "../lib/handEval";
 import { displayName } from "../lib/displayName";
-import {
-  ActionBar,
-  getRequiredDiscard,
-  getRequiredPlace,
-} from "./ActionBar";
+import { getRequiredDiscard, getRequiredPlace } from "../lib/turnRequirements";
+import { ActionBar } from "./ActionBar";
 import { Hand } from "./Hand";
 import { PlayerBoard } from "./PlayerBoard";
 import { ResultModal } from "./ResultModal";
@@ -57,16 +54,18 @@ function isResultPhase(gs: GameState | null): boolean {
 export function OfcTable({ session }: Props) {
   const { gameState, myPlayerId } = session;
 
-  // pending 인터랙션 상태 — gameState.phase가 바뀌면 자동 reset.
+  // pending 인터랙션 상태 — gameState ref가 바뀌면 자동 reset.
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [selectedCardIdx, setSelectedCardIdx] = useState<number | null>(null);
   const [placed, setPlaced] = useState<PlacedSlot[]>([]);
   const [animationDone, setAnimationDone] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // 새 state(턴 진행 / 라운드 진행 / 다른 사람 액션 결과)가 도착하면 pending 인터랙션 초기화.
-  // gameState ref가 바뀔 때만 트리거 — 연습/게임 모두 같은 동작.
-  useEffect(() => {
+  // 새 state(턴 진행 / 라운드 진행 / 다른 사람 액션 결과)가 도착하면 pending 초기화.
+  // React 권장 derived-state 패턴 — render 중 prev ref 변경 감지 시 setState.
+  const [lastGs, setLastGs] = useState<GameState | null>(gameState);
+  if (lastGs !== gameState) {
+    setLastGs(gameState);
     setSelectedRow(null);
     setSelectedCardIdx(null);
     setPlaced([]);
@@ -75,7 +74,7 @@ export function OfcTable({ session }: Props) {
       setAnimationDone(false);
       setModalOpen(false);
     }
-  }, [gameState]);
+  }
 
   const me = useMemo(
     () => gameState?.players.find((p) => p.player_id === myPlayerId) ?? null,

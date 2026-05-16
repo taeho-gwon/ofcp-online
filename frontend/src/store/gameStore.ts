@@ -13,6 +13,7 @@ interface GameStore {
   commitPendingState: () => void;
   setConnected: (c: boolean) => void;
   setError: (e: string | null) => void;
+  reset: () => void;
 }
 
 function isResultPhase(s: GameState | null): boolean {
@@ -41,4 +42,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   setConnected: (c) => set({ connected: c }),
   setError: (e) => set({ error: e }),
+  reset: () =>
+    set({ gameState: null, pendingState: null, connected: false, error: null }),
 }));

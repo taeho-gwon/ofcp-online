@@ -2,16 +2,28 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createRoom } from "../api/rooms";
+import { PageHeader } from "../components/PageHeader";
+import { Button, Input, Segmented } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
 type Preset = "pineapple" | "pineapple-short";
 
-const PRESETS: { value: Preset; label: string; sub: string }[] = [
-  { value: "pineapple", label: "12라운드", sub: "100점" },
-  { value: "pineapple-short", label: "6라운드", sub: "50점" },
+const PRESET_OPTIONS = [
+  { value: "pineapple", label: "12라운드 · 100점" },
+  { value: "pineapple-short", label: "6라운드 · 50점" },
 ];
 
-const SEATS = [2, 3];
+const SEAT_OPTIONS = [
+  { value: "2", label: "2명" },
+  { value: "3", label: "3명" },
+];
+
+const fieldLabelStyle = {
+  fontSize: "var(--fs-caption)",
+  fontWeight: 600,
+  color: "var(--text-secondary)",
+  letterSpacing: "0.01em",
+};
 
 export function Lobby() {
   const navigate = useNavigate();
@@ -45,82 +57,80 @@ export function Lobby() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-slate-100 p-4 pb-12">
-      <header className="w-full max-w-md flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">OFC Online</h1>
-        <div className="text-xs flex items-center gap-2">
-          <span className="text-slate-600">{user?.nickname}</span>
-          <button
-            type="button"
-            onClick={logout}
-            className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300"
-          >
-            로그아웃
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col items-center p-4 pb-12">
+      <PageHeader
+        title="OFC Online"
+        maxWidth={448}
+        rightActions={
+          <>
+            <span
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              {user?.nickname}
+            </span>
+            <Button type="button" variant="ghost" size="sm" onClick={logout}>
+              로그아웃
+            </Button>
+          </>
+        }
+      />
 
-      <div className="w-full max-w-md flex flex-col gap-4">
-        <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-3">
-          <h2 className="font-semibold">방 만들기</h2>
+      <div
+        className="w-full flex flex-col gap-4"
+        style={{ maxWidth: 448 }}
+      >
+        <section className="card">
+          <h2
+            style={{
+              fontSize: "var(--fs-body-lg)",
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
+            방 만들기
+          </h2>
           <div className="flex flex-col gap-1.5">
-            <div className="text-xs text-slate-500">매치 길이</div>
-            <div className="grid grid-cols-2 gap-2">
-              {PRESETS.map((p) => {
-                const active = preset === p.value;
-                return (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setPreset(p.value)}
-                    className={`px-3 py-2 rounded border text-sm flex flex-col items-center ${
-                      active
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="font-semibold">{p.label}</span>
-                    <span className="text-xs text-slate-500">{p.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <div style={fieldLabelStyle}>매치 길이</div>
+            <Segmented
+              options={PRESET_OPTIONS}
+              value={preset}
+              onChange={(v) => setPreset(v as Preset)}
+              aria-label="매치 길이"
+            />
           </div>
           <div className="flex flex-col gap-1.5">
-            <div className="text-xs text-slate-500">정원</div>
-            <div className="grid grid-cols-2 gap-2">
-              {SEATS.map((n) => {
-                const active = maxSeats === n;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setMaxSeats(n)}
-                    className={`px-3 py-2 rounded border text-sm ${
-                      active
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    {n}명
-                  </button>
-                );
-              })}
-            </div>
+            <div style={fieldLabelStyle}>정원</div>
+            <Segmented
+              options={SEAT_OPTIONS}
+              value={String(maxSeats)}
+              onChange={(v) => setMaxSeats(Number(v))}
+              aria-label="정원"
+            />
           </div>
-          <button
+          <Button
             type="button"
+            variant="primary"
             onClick={handleCreate}
             disabled={creating}
-            className="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300"
           >
             {creating ? "생성 중..." : "방 만들기"}
-          </button>
+          </Button>
         </section>
 
-        <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-3">
-          <h2 className="font-semibold">방 참가</h2>
-          <input
+        <section className="card">
+          <h2
+            style={{
+              fontSize: "var(--fs-body-lg)",
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
+            방 참가
+          </h2>
+          <Input
             type="text"
             value={joinCode}
             maxLength={6}
@@ -129,40 +139,42 @@ export function Lobby() {
               if (e.key === "Enter") handleJoin();
             }}
             placeholder="방 코드 (6자)"
-            className="px-3 py-2 border border-slate-300 rounded font-mono tracking-widest text-center text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            style={{
+              fontFamily: "var(--font-mono)",
+              letterSpacing: "0.18em",
+              textAlign: "center",
+              fontSize: "var(--fs-body-lg)",
+              height: 44,
+            }}
           />
-          <button
-            type="button"
-            onClick={handleJoin}
-            className="px-4 py-2 rounded bg-slate-800 text-white hover:bg-slate-700"
-          >
+          <Button type="button" variant="primary" onClick={handleJoin}>
             참가하기
-          </button>
+          </Button>
         </section>
 
-        <section className="bg-white rounded-lg shadow p-5 flex flex-col gap-2">
-          <button
+        <section className="card">
+          <Button
             type="button"
+            variant="accentOutline"
             onClick={() => navigate("/tutorial")}
-            className="px-3 py-2 rounded bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 text-sm font-semibold"
           >
             ★ 튜토리얼 — 처음이라면 여기부터
-          </button>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <button
+          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => navigate("/history")}
-              className="px-3 py-2 rounded border border-slate-300 text-slate-800 hover:bg-slate-50"
             >
               내 기록
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => navigate("/practice")}
-              className="px-3 py-2 rounded border border-slate-300 text-slate-800 hover:bg-slate-50"
             >
               연습 모드
-            </button>
+            </Button>
           </div>
         </section>
       </div>

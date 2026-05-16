@@ -32,6 +32,36 @@ React + Vite + TypeScript 프론트엔드, FastAPI + Python 3.13 백엔드, WebS
 
 ---
 
+## 프론트엔드 디자인 시스템
+
+페이지·컴포넌트 작성 시 다음 규칙을 따른다.
+
+### 계층 구조
+
+- **토큰**: `frontend/src/styles/tokens.css` — 색·간격·폰트·그림자 등 raw 값을 CSS 변수로 정의. 라이트/다크 모드 모두 같은 변수명.
+- **프리미티브 컴포넌트**: `frontend/src/components/ui/*` — Button, Field/Input, Alert, Badge, Modal 등. 토큰을 흡수한 일관된 UI 단위.
+- **게임 컴포넌트**: `frontend/src/components/game/*` — RoomCode, ScorePill, Timer 등 게임 도메인 전용.
+- **페이지**: 위 컴포넌트를 조립하는 곳. 색·시각 스타일을 직접 작성하지 않는다.
+
+### Tailwind와의 분담
+
+- **Tailwind = 레이아웃 전용**: `flex`, `grid`, `gap-*`, `p-*`, `m-*`, `min-h-*`, `max-w-*`, `w-*`, `items-*`, `justify-*`, `text-center`, `text-left` 등 구조·간격 유틸만 사용.
+- **색·배경·테두리·그림자·radius·폰트 크기·hover 상태 = 디자인 시스템**: 토큰(`var(--bg-surface)` 등)을 흡수한 클래스(`.card`, `.btn`)나 UI 컴포넌트를 쓴다.
+- **금지**: `bg-slate-*`, `bg-white`, `text-amber-*`, `border-slate-*`, `shadow`(Tailwind), `rounded-lg` 같은 색·시각 유틸. 발견 즉시 토큰·컴포넌트로 교체.
+
+### 새 색·새 컴포넌트가 필요할 때
+
+- 색이 필요한 곳: 먼저 `tokens.css`에 해당 의미의 토큰이 있는지 확인 → 있으면 사용, 없으면 라이트/다크 두 모드에 함께 추가.
+- 1회용 시각 보정: 인라인 `style={{ color: "var(--text-secondary)" }}` 허용.
+- 재사용될 컴포넌트: `components/ui/`에 추가하고 `index.ts`에서 export.
+
+### 라이트 모드 전용
+
+- 1단계는 라이트 모드만 사용. 다크 모드 토글·`useColorMode` 훅·`[data-mode="dark"]` 토큰 블록 모두 제거됨.
+- **카드 시각(`components/cardSkins/`)은 토큰을 거치지 않고 raw 색을 사용**한다. 추후 다크 모드가 다시 도입되더라도 카드 face·back·empty slot은 모드와 무관하게 동일한 색을 유지해야 한다 (다른 코스메틱 스킨도 동일 원칙).
+
+---
+
 ## 1단계 범위와 의도적 제외 항목
 
 아래는 버그나 누락이 아니라 **의도적으로 배제**한 항목이다.
@@ -104,3 +134,4 @@ FantasyLand 중 다음 조건 달성 시 다음 라운드도 FantasyLand(14장):
 - 2단계 Surrender 옵션 상세 룰
 - 3단계 관전 시 손패 공개 범위
 - MSA 전환 구체적 시점 및 기준
+- 프론트엔드 AppShell 전환 — 현재 `PageHeader` 컴포넌트로 헤더 슬롯을 통일했지만, 추후 사이드바·상단바·콘텐츠 영역을 분리한 풀 AppShell로 발전시킬 수 있음. 페이지가 30개를 넘거나 다중 패널 UI(채팅·관전·랭킹 등)가 필요해지는 시점에 재검토.

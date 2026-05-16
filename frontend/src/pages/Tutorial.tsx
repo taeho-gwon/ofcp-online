@@ -9,9 +9,11 @@ import type {
   PlayerState,
 } from "../api/types";
 import { CardView } from "../components/Card";
+import { PageHeader } from "../components/PageHeader";
 import { PlayerBoard } from "../components/PlayerBoard";
 import { ResultModal } from "../components/ResultModal";
 import { TutorialOverlay } from "../components/TutorialOverlay";
+import { Button } from "../components/ui";
 import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
   handLabel,
@@ -285,30 +287,32 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
   const stepNo = bubbleKey ? visibleBubbleStepNo[bubbleKey] : 0;
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
-      <header className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="text-xs text-slate-500 hover:underline"
-        >
-          ← 로비
-        </button>
-        <div className="text-sm font-semibold">{scenario.title}</div>
-        <button
-          type="button"
-          onClick={skip}
-          className="text-xs text-slate-500 hover:underline"
-        >
-          건너뛰기
-        </button>
-      </header>
+    <div className="min-h-screen p-4 flex flex-col gap-3 pb-12">
+      <PageHeader
+        back={{ label: "← 로비", to: "/" }}
+        title={
+          <div style={{ fontSize: "var(--fs-body-sm)", fontWeight: 600 }}>
+            {scenario.title}
+          </div>
+        }
+        rightActions={
+          <Button type="button" variant="ghost" size="sm" onClick={skip}>
+            건너뛰기
+          </Button>
+        }
+      />
 
-      {/* 내 손패 (현재 turn 카드) */}
       <section className="flex flex-col items-center gap-1 min-h-[6rem]">
         {d.myHand.length > 0 ? (
           <>
-            <div className="text-xs text-slate-500">내 카드</div>
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              내 카드
+            </div>
             <div className="flex gap-1">
               {d.myHand.map((c, i) => (
                 <CardView key={`mh-${i}-${c.rank}-${c.suit}`} card={c} />
@@ -316,7 +320,12 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
             </div>
           </>
         ) : (
-          <div className="text-xs text-slate-400">
+          <div
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-tertiary)",
+            }}
+          >
             {d.isResult
               ? "라운드 종료"
               : currentStep && currentStep.kind === "intro"
@@ -326,7 +335,6 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
         )}
       </section>
 
-      {/* 보드 두 개 — 봇 위, 사용자 아래 */}
       <main className="flex flex-col items-center gap-3">
         <div className="w-full max-w-md">
           <PlayerBoard
@@ -337,7 +345,14 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
             isDealer={false}
           />
         </div>
-        <div className="text-xs text-slate-400">vs</div>
+        <div
+          style={{
+            fontSize: "var(--fs-caption)",
+            color: "var(--text-tertiary)",
+          }}
+        >
+          vs
+        </div>
         <div className="w-full max-w-md">
           <PlayerBoard
             player={me}
@@ -349,8 +364,17 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
         </div>
 
         {d.myDiscarded.length > 0 && (
-          <div className="w-full max-w-md bg-white rounded-lg shadow p-3">
-            <div className="text-xs text-slate-500 mb-1">
+          <div
+            className="card"
+            style={{ maxWidth: 448, width: "100%", padding: 12 }}
+          >
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+                marginBottom: 4,
+              }}
+            >
               내가 버린 카드 / 봇이 버린 카드
             </div>
             <div className="flex flex-wrap justify-center gap-1">
@@ -376,7 +400,6 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
         )}
       </main>
 
-      {/* bubble or 진행 버튼 */}
       {bubbleText ? (
         <TutorialOverlay
           text={bubbleText}
@@ -393,16 +416,20 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
           }
         />
       ) : (
-        // 진행만 하는 step — 화면 하단에 작은 "다음" 버튼
         !modalOpen && (
           <div className="fixed inset-x-0 bottom-12 z-30 flex justify-center pointer-events-none">
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={next}
-              className="pointer-events-auto px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-lg"
+              className="pointer-events-auto"
+              style={{
+                borderRadius: "var(--radius-full)",
+                boxShadow: "var(--shadow-lg)",
+              }}
             >
               다음 →
-            </button>
+            </Button>
           </div>
         )
       )}

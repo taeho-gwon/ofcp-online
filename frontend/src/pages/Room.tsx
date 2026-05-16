@@ -3,6 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Room as RoomData } from "../api/authTypes";
 import { RoomSocket } from "../api/roomsWs";
+import { RoomCode } from "../components/game/RoomCode";
+import { PageHeader } from "../components/PageHeader";
+import { Badge, Button } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
 interface Countdown {
@@ -55,7 +58,6 @@ export function Room() {
     };
   }, [code, accessToken, navigate]);
 
-  // 카운트다운 tick
   useEffect(() => {
     if (!countdown) return;
     if (countdown.remaining <= 0) {
@@ -89,7 +91,7 @@ export function Room() {
     navigate("/");
   };
 
-  const copyCode = async () => {
+  const handleCopy = async () => {
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
@@ -101,52 +103,42 @@ export function Room() {
 
   if (!code) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 pb-12">
+      <div
+        className="min-h-screen flex items-center justify-center pb-12"
+        style={{ color: "var(--text-tertiary)" }}
+      >
         잘못된 방 링크입니다.
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col items-center pb-12">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-5 flex flex-col gap-4">
-        <header className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={leave}
-            className="text-xs text-slate-500 hover:underline"
-            disabled={!!countdown}
-          >
-            ← 로비
-          </button>
-          <span className="text-xs">
-            {connected ? (
-              <span className="text-emerald-600">● 연결됨</span>
-            ) : (
-              <span className="text-rose-600">● 연결 중</span>
-            )}
-          </span>
-        </header>
-
+    <div className="min-h-screen p-4 flex flex-col items-center pb-12">
+      <PageHeader
+        back={{ label: "← 로비", onClick: leave, disabled: !!countdown }}
+        rightActions={
+          <Badge tone={connected ? "success" : "danger"} dot>
+            {connected ? "연결됨" : "연결 중"}
+          </Badge>
+        }
+        maxWidth={448}
+      />
+      <div
+        className="card flex flex-col gap-4"
+        style={{ maxWidth: 448, width: "100%" }}
+      >
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs text-slate-500">방 코드</div>
-            <div className="font-mono text-3xl font-bold tracking-widest">
-              {code}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={copyCode}
-            className="px-3 py-1.5 rounded bg-slate-800 text-white text-xs hover:bg-slate-700"
-          >
-            복사
-          </button>
+          <RoomCode value={code} onCopy={handleCopy} />
         </div>
 
         {room && (
           <>
-            <div className="text-xs text-slate-500">
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+              }}
+            >
               {room.ruleset_name === "pineapple" ? "12라운드" : "6라운드"} ·
               정원 {room.max_seats}명
             </div>
@@ -158,7 +150,14 @@ export function Room() {
                   return (
                     <div
                       key={`empty-${i}`}
-                      className="flex items-center justify-between p-3 rounded border border-dashed border-slate-300 text-slate-400 text-sm"
+                      className="flex items-center justify-between"
+                      style={{
+                        padding: 12,
+                        borderRadius: "var(--radius-md)",
+                        border: "1px dashed var(--border-default)",
+                        color: "var(--text-tertiary)",
+                        fontSize: "var(--fs-body-sm)",
+                      }}
                     >
                       <span>비어 있음</span>
                     </div>
@@ -169,35 +168,36 @@ export function Room() {
                 return (
                   <div
                     key={m.user_id}
-                    className={`flex items-center justify-between p-3 rounded border ${
-                      isMe
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-slate-200"
-                    }`}
+                    className="flex items-center justify-between"
+                    style={{
+                      padding: 12,
+                      borderRadius: "var(--radius-md)",
+                      border: isMe
+                        ? "1px solid var(--accent-border)"
+                        : "1px solid var(--border-subtle)",
+                      background: isMe ? "var(--accent-soft)" : undefined,
+                    }}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold">{m.nickname}</span>
-                      {memberIsHost && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                          호스트
-                        </span>
-                      )}
+                      <span style={{ fontWeight: 600 }}>{m.nickname}</span>
+                      {memberIsHost && <Badge tone="warning">호스트</Badge>}
                       {isMe && (
-                        <span className="text-xs text-emerald-700">(나)</span>
+                        <span
+                          style={{
+                            fontSize: "var(--fs-caption)",
+                            color: "var(--accent-soft-text)",
+                          }}
+                        >
+                          (나)
+                        </span>
                       )}
                     </div>
                     {memberIsHost ? (
-                      <span className="text-xs px-2 py-1 rounded bg-amber-500 text-white font-semibold">
-                        시작 권한
-                      </span>
+                      <Badge tone="warning">시작 권한</Badge>
                     ) : m.ready ? (
-                      <span className="text-xs px-2 py-1 rounded bg-emerald-600 text-white font-semibold">
-                        준비
-                      </span>
+                      <Badge tone="success">준비</Badge>
                     ) : (
-                      <span className="text-xs px-2 py-1 rounded bg-slate-200 text-slate-600">
-                        대기
-                      </span>
+                      <Badge>대기</Badge>
                     )}
                   </div>
                 );
@@ -205,20 +205,41 @@ export function Room() {
             </div>
 
             {countdown ? (
-              <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-3 text-center">
-                <div className="text-emerald-700 font-semibold">
+              <div
+                style={{
+                  background: "var(--accent-soft)",
+                  border: "1px solid var(--accent-border)",
+                  borderRadius: "var(--radius-lg)",
+                  padding: 12,
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    color: "var(--accent-soft-text)",
+                    fontWeight: 600,
+                  }}
+                >
                   곧 게임이 시작됩니다
                 </div>
-                <div className="text-4xl font-mono font-bold text-emerald-700 mt-1">
+                <div
+                  style={{
+                    fontSize: "var(--fs-display)",
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: 700,
+                    color: "var(--accent-soft-text)",
+                    marginTop: 4,
+                  }}
+                >
                   {countdown.remaining}
                 </div>
               </div>
             ) : isHost ? (
-              <button
+              <Button
                 type="button"
+                variant="primary"
                 onClick={startGame}
                 disabled={!canStart}
-                className="px-4 py-2 rounded text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
                 title={
                   !canStart
                     ? room.members.length < 2
@@ -232,19 +253,15 @@ export function Room() {
                   : allGuestsReady
                     ? "게임 시작"
                     : "참가자 준비 대기 중"}
-              </button>
+              </Button>
             ) : me ? (
-              <button
+              <Button
                 type="button"
+                variant={me.ready ? "secondary" : "primary"}
                 onClick={toggleReady}
-                className={`px-4 py-2 rounded text-white ${
-                  me.ready
-                    ? "bg-slate-500 hover:bg-slate-600"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
               >
                 {me.ready ? "준비 해제" : "준비 완료"}
-              </button>
+              </Button>
             ) : null}
           </>
         )}

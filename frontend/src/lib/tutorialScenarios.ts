@@ -24,7 +24,12 @@ export type NormalBubbleKey =
   | "normal_turn_my"
   | "result";
 
-export type FantasyBubbleKey = "intro" | "fl_hand" | "fl_placed" | "result";
+export type FantasyBubbleKey =
+  | "intro"
+  | "fl_hand"
+  | "fl_placed"
+  | "opp_done"
+  | "result";
 
 // 호환을 위한 alias (이전 코드에서 import해 쓰던 이름)
 export type BubbleKey = NormalBubbleKey;
@@ -501,6 +506,8 @@ export const SCENARIO_FL_PROGRESS: FantasyScenario = {
       "FL hand 14장이 손에 들어왔습니다. K 세 장(트립스 시드), 8 네 장(포카드!), Q 두 장 등 강한 카드가 모여있네요. middle을 K 트리플, bottom을 8 포카드, top을 Q 페어로 만드는 게 가장 큰 점수가 나옵니다.",
     fl_placed:
       "배치 완료. top Q 페어(+7), middle K 트리플(+2), bottom 8 포카드(+10) = Royalty +19. **bottom 포카드 이상이라 연속 FL 자격**도 획득. 다음 라운드도 14장!",
+    opp_done:
+      "FL 플레이어가 1턴에 배치를 마치는 동안 봇은 일반 라운드 5턴을 진행해 보드를 채웠습니다. 이제 양쪽 보드를 비교합니다.",
     result:
       "점수 — 라인 +3, 스쿱 +3, Royalty 차이 +17(사용자 19 − 봇 2) = 총 +23. 그리고 **다음 라운드도 FantasyLand(14장)**. top 트립스나 bottom 포카드 이상이 연속 FL 조건이라는 점 기억하세요.",
   },

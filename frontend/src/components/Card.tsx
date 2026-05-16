@@ -1,5 +1,5 @@
 import type { Card as CardType } from "../api/types";
-import { RANK_LABEL, SUIT_IS_RED, SUIT_LABEL } from "../api/types";
+import { useCardSkin } from "./cardSkins";
 
 interface Props {
   card: CardType;
@@ -16,24 +16,19 @@ export function CardView({
   onClick,
   size = "md",
 }: Props) {
-  const red = SUIT_IS_RED[card.suit];
+  const skin = useCardSkin();
   const clickable = !!onClick;
-
-  const dim = size === "sm" ? "w-11 h-14 text-lg" : "w-16 h-20 text-2xl";
-  const ring = selected ? "ring-2 ring-amber-400" : "";
-  const fade = faded ? "opacity-30" : "";
-  const cursor = clickable ? "cursor-pointer hover:-translate-y-1" : "";
-  const color = red ? "text-rose-600" : "text-slate-900";
-
+  const cls = [
+    "card-view",
+    clickable && "is-clickable",
+    selected && "is-selected",
+    faded && "is-faded",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!clickable}
-      className={`${dim} ${ring} ${fade} ${cursor} bg-white border border-slate-300 rounded-md flex flex-col items-center justify-center shadow-sm transition select-none disabled:cursor-default ${color}`}
-    >
-      <span className="font-bold leading-none">{RANK_LABEL[card.rank]}</span>
-      <span className="leading-none">{SUIT_LABEL[card.suit]}</span>
+    <button type="button" onClick={onClick} disabled={!clickable} className={cls}>
+      <skin.Face card={card} size={size} />
     </button>
   );
 }
@@ -44,30 +39,24 @@ interface SlotProps {
   highlighted?: boolean;
 }
 
-export function EmptySlot({ onClick, size = "md", highlighted = false }: SlotProps) {
-  const dim = size === "sm" ? "w-11 h-14" : "w-16 h-20";
+export function EmptySlot({
+  onClick,
+  size = "md",
+  highlighted = false,
+}: SlotProps) {
+  const skin = useCardSkin();
   const clickable = !!onClick;
-  const cursor = clickable
-    ? "cursor-pointer hover:bg-amber-100"
-    : "";
-  const tone = highlighted
-    ? "bg-amber-100/70 border-amber-400"
-    : "bg-slate-100 border-slate-300";
+  const cls = ["card-slot", clickable && "is-clickable"]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!clickable}
-      className={`${dim} ${cursor} ${tone} border border-dashed rounded-md transition disabled:cursor-default`}
-    />
+    <button type="button" onClick={onClick} disabled={!clickable} className={cls}>
+      <skin.EmptySlot size={size} highlighted={highlighted} />
+    </button>
   );
 }
 
 export function CardBack({ size = "sm" }: { size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "w-11 h-14" : "w-16 h-20";
-  return (
-    <div
-      className={`${dim} bg-gradient-to-br from-indigo-500 to-indigo-700 border border-indigo-800 rounded-md shadow-sm`}
-    />
-  );
+  const skin = useCardSkin();
+  return <skin.Back size={size} />;
 }

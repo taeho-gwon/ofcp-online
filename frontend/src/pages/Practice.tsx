@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type {
   BoardEvaluation,
   Card,
@@ -10,6 +9,8 @@ import type {
 } from "../api/types";
 import { CardView } from "../components/Card";
 import { OfcTable, type OfcSession } from "../components/OfcTable";
+import { PageHeader } from "../components/PageHeader";
+import { Button } from "../components/ui";
 import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
   handLabel,
@@ -206,7 +207,6 @@ function applyAction(s: PracticeState, msg: WsClientMsg): PracticeState {
 }
 
 export function Practice() {
-  const navigate = useNavigate();
   const authed = useAuthStore((a) => !!a.accessToken);
   const [s, setS] = useState<PracticeState>(() => startNewRound(0));
 
@@ -234,37 +234,55 @@ export function Practice() {
     s.committed.top.length + s.committed.middle.length + s.committed.bottom.length;
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex flex-col gap-3 pb-12">
-      <header className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate(authed ? "/" : "/login")}
-          className="text-xs text-slate-500 hover:underline"
-        >
-          ← {authed ? "로비" : "로그인"}
-        </button>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="font-semibold">{headerStatus}</span>
-          <span className="text-slate-400">·</span>
-          <span className="text-slate-500 text-xs">
-            진행 {placedCount}/13 · 버림 {s.discarded.length}/4 · 누적{" "}
-            {s.cumulativeScore}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setS(startNewRound(0))}
-          className="text-sm px-3 py-1 rounded bg-slate-200 hover:bg-slate-300"
-        >
-          처음부터
-        </button>
-      </header>
+    <div className="min-h-screen p-4 flex flex-col gap-3 pb-12">
+      <PageHeader
+        back={{
+          label: `← ${authed ? "로비" : "로그인"}`,
+          to: authed ? "/" : "/login",
+        }}
+        title={
+          <div className="flex items-center gap-3">
+            <span style={{ fontWeight: 600 }}>{headerStatus}</span>
+            <span style={{ color: "var(--text-tertiary)" }}>·</span>
+            <span
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              진행 {placedCount}/13 · 버림 {s.discarded.length}/4 · 누적{" "}
+              {s.cumulativeScore}
+            </span>
+          </div>
+        }
+        rightActions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setS(startNewRound(0))}
+          >
+            처음부터
+          </Button>
+        }
+      />
 
       <OfcTable session={session} />
 
       {s.discarded.length > 0 && s.phase !== "done" && (
-        <div className="w-full max-w-md mx-auto bg-white rounded-lg shadow p-3">
-          <div className="text-xs text-slate-500 mb-1">버린 카드</div>
+        <div
+          className="card mx-auto"
+          style={{ maxWidth: 448, width: "100%", padding: 12 }}
+        >
+          <div
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-tertiary)",
+              marginBottom: 4,
+            }}
+          >
+            버린 카드
+          </div>
           <div className="flex flex-wrap justify-center gap-1">
             {s.discarded.map((c, i) => (
               <CardView

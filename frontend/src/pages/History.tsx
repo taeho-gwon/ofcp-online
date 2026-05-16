@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { listMyGames, type GameListItem } from "../api/records";
+import { PageHeader } from "../components/PageHeader";
+import { Badge } from "../components/ui";
 
 const RULESET_LABEL: Record<string, string> = {
   pineapple: "12라운드",
@@ -18,8 +20,23 @@ function formatDate(iso: string): string {
   return `${yy}/${mm}/${dd} ${hh}:${mi}`;
 }
 
+const emptyMessageStyle = {
+  padding: 24,
+  textAlign: "center" as const,
+  color: "var(--text-tertiary)",
+  fontSize: "var(--fs-body-sm)",
+};
+
+const linkStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "12px 16px",
+  borderBottom: "1px solid var(--border-subtle)",
+  color: "var(--text-primary)",
+};
+
 export function History() {
-  const navigate = useNavigate();
   const [entries, setEntries] = useState<GameListItem[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,54 +51,57 @@ export function History() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-slate-100 p-4 pb-12">
-      <header className="w-full max-w-2xl flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="text-sm text-slate-600 hover:text-slate-900"
-        >
-          ← 로비
-        </button>
-        <h1 className="text-xl font-bold">내 기록</h1>
-        <span className="w-12" />
-      </header>
+    <div className="min-h-screen flex flex-col items-center p-4 pb-12">
+      <PageHeader
+        title="내 기록"
+        back={{ label: "← 로비", to: "/" }}
+        maxWidth={672}
+      />
 
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow">
-        {loading && (
-          <div className="p-6 text-center text-slate-500 text-sm">
-            불러오는 중...
-          </div>
-        )}
+      <div
+        className="card"
+        style={{ maxWidth: 672, width: "100%", padding: 0 }}
+      >
+        {loading && <div style={emptyMessageStyle}>불러오는 중...</div>}
         {!loading && entries && entries.length === 0 && (
-          <div className="p-6 text-center text-slate-500 text-sm">
-            아직 완료된 게임이 없습니다.
-          </div>
+          <div style={emptyMessageStyle}>아직 완료된 게임이 없습니다.</div>
         )}
         {!loading && entries && entries.length > 0 && (
-          <ul className="divide-y divide-slate-200">
-            {entries.map((g) => (
+          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+            {entries.map((g, idx) => (
               <li key={g.game_id}>
                 <Link
                   to={`/replay/${g.game_id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-50"
+                  style={{
+                    ...linkStyle,
+                    borderBottom:
+                      idx === entries.length - 1
+                        ? "none"
+                        : "1px solid var(--border-subtle)",
+                  }}
                 >
                   <div className="flex flex-col">
-                    <span className="font-mono text-xs text-slate-500">
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "var(--fs-caption)",
+                        color: "var(--text-tertiary)",
+                      }}
+                    >
                       {formatDate(g.started_at)}
                     </span>
-                    <span className="text-sm">
+                    <span style={{ fontSize: "var(--fs-body-sm)" }}>
                       {RULESET_LABEL[g.ruleset] ?? g.ruleset}
                       {" · "}
                       {g.round_count}라운드
                       {g.ended_at == null && (
-                        <span className="ml-2 text-xs text-amber-600">
-                          진행 중
+                        <span style={{ marginLeft: 8 }}>
+                          <Badge tone="warning">진행 중</Badge>
                         </span>
                       )}
                     </span>
                   </div>
-                  <span className="text-slate-400">›</span>
+                  <span style={{ color: "var(--text-tertiary)" }}>›</span>
                 </Link>
               </li>
             ))}
