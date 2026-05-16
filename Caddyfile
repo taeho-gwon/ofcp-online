@@ -2,5 +2,14 @@
 # Caddy v2의 reverse_proxy는 WebSocket을 자동 처리한다.
 {$SITE_ADDRESS} {
 	encode zstd gzip
+
+	# /assets/* — Vite가 파일명에 content hash를 박아 두므로 영구 캐시.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html — 항상 서버에 검증(304)하도록. 새 배포 시 즉시 새 hash JS를 잡아온다.
+	@html path / /index.html
+	header @html Cache-Control "no-cache"
+
 	reverse_proxy api:8000
 }
