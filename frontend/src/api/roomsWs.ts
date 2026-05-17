@@ -8,6 +8,7 @@ export interface RoomSocketHandlers {
 
 export class RoomSocket {
   private ws: WebSocket;
+  private disposed = false;
 
   constructor(code: string, token: string, handlers: RoomSocketHandlers) {
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -16,8 +17,26 @@ export class RoomSocket {
     )}?token=${encodeURIComponent(token)}`;
     this.ws = new WebSocket(url);
 
-    this.ws.onopen = () => handlers.onOpen?.();
-    this.ws.onclose = () => handlers.onClose?.();
+    this.ws.onopen = () => {
+      // StrictMode가 CONNECTING 중에 close()를 호출한 경우, 여기서 정리.
+      if (this.disposed) {
+        try {
+          this.ws.close();
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      handlers.onOpen?.();
+    };
+    this.ws.onclose = (ev) => {
+      console.log("Room ws closed", {
+        code: ev.code,
+        reason: ev.reason,
+        wasClean: ev.wasClean,
+      });
+      handlers.onClose?.();
+    };
     this.ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data) as RoomWsServerMsg;
@@ -37,6 +56,12 @@ export class RoomSocket {
   }
 
   close(): void {
-    this.ws.close();
+    this.disposed = true;
+    // CONNECTING 단계에서 close()를 호출하면 브라우저가
+    // "WebSocket is closed before the connection is established" 경고를 띄움.
+    // 그래서 onopen에서 disposed 체크 후 닫도록 위임.
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.close();
+    }
   }
 }
