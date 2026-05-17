@@ -8,6 +8,7 @@ import { Game } from "./pages/Game";
 import { History } from "./pages/History";
 import { Lobby } from "./pages/Lobby";
 import { Login } from "./pages/Login";
+import { MyPage } from "./pages/MyPage";
 import { NicknameSetup } from "./pages/NicknameSetup";
 import { Practice } from "./pages/Practice";
 import { Replay } from "./pages/Replay";
@@ -50,6 +51,14 @@ function App() {
             element={
               <RequireAuth>
                 <Game />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/me"
+            element={
+              <RequireAuth>
+                <MyPage />
               </RequireAuth>
             }
           />

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
   BoardEvaluation,
   Card,
@@ -9,7 +10,6 @@ import type {
 } from "../api/types";
 import { CardView } from "../components/Card";
 import { OfcTable, type OfcSession } from "../components/OfcTable";
-import { PageHeader } from "../components/PageHeader";
 import { Button } from "../components/ui";
 import { evaluate, HandRank, isFoulBoard } from "../lib/handEval";
 import {
@@ -19,6 +19,22 @@ import {
   royaltyTop,
 } from "../lib/royalty";
 import { useAuthStore } from "../store/authStore";
+
+const PAGE_MAX_WIDTH = 1200;
+
+const heroTitleStyle = {
+  fontSize: "var(--fs-display)",
+  fontWeight: 700,
+  letterSpacing: "var(--tracking-tight)",
+  margin: 0,
+  lineHeight: 1.1,
+};
+
+const heroSubtitleStyle = {
+  fontSize: "var(--fs-body-lg)",
+  color: "var(--text-secondary)",
+  margin: "10px 0 0",
+};
 
 const SUITS = [1, 2, 3, 4];
 const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
@@ -207,6 +223,7 @@ function applyAction(s: PracticeState, msg: WsClientMsg): PracticeState {
 }
 
 export function Practice() {
+  const navigate = useNavigate();
   const authed = useAuthStore((a) => !!a.accessToken);
   const [s, setS] = useState<PracticeState>(() => startNewRound(0));
 
@@ -234,67 +251,68 @@ export function Practice() {
     s.committed.top.length + s.committed.middle.length + s.committed.bottom.length;
 
   return (
-    <div className="min-h-screen p-4 flex flex-col gap-3 pb-12">
-      <PageHeader
-        back={{
-          label: `← ${authed ? "로비" : "로그인"}`,
-          to: authed ? "/" : "/login",
-        }}
-        title={
-          <div className="flex items-center gap-3">
-            <span style={{ fontWeight: 600 }}>{headerStatus}</span>
-            <span style={{ color: "var(--text-tertiary)" }}>·</span>
-            <span
+    <div className="min-h-screen flex flex-col items-center p-6 pb-12">
+      <div
+        className="w-full flex flex-col gap-3"
+        style={{ maxWidth: PAGE_MAX_WIDTH }}
+      >
+        <header className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 style={heroTitleStyle}>연습 모드</h1>
+            <p style={heroSubtitleStyle}>
+              {headerStatus} · 진행 {placedCount}/13 · 버림 {s.discarded.length}
+              /4 · 누적 {s.cumulativeScore}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setS(startNewRound(0))}
+            >
+              처음부터
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(authed ? "/" : "/login")}
+            >
+              ← {authed ? "로비" : "로그인"}
+            </Button>
+          </div>
+        </header>
+
+        <OfcTable session={session} />
+
+        {s.discarded.length > 0 && s.phase !== "done" && (
+          <div
+            className="card mx-auto"
+            style={{ maxWidth: 448, width: "100%", padding: 12 }}
+          >
+            <div
               style={{
                 fontSize: "var(--fs-caption)",
                 color: "var(--text-tertiary)",
+                marginBottom: 4,
               }}
             >
-              진행 {placedCount}/13 · 버림 {s.discarded.length}/4 · 누적{" "}
-              {s.cumulativeScore}
-            </span>
+              버린 카드
+            </div>
+            <div className="flex flex-wrap justify-center gap-1">
+              {s.discarded.map((c, i) => (
+                <CardView
+                  key={`d-${i}-${c.rank}-${c.suit}`}
+                  card={c}
+                  size="sm"
+                  faded
+                />
+              ))}
+            </div>
           </div>
-        }
-        rightActions={
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setS(startNewRound(0))}
-          >
-            처음부터
-          </Button>
-        }
-      />
-
-      <OfcTable session={session} />
-
-      {s.discarded.length > 0 && s.phase !== "done" && (
-        <div
-          className="card mx-auto"
-          style={{ maxWidth: 448, width: "100%", padding: 12 }}
-        >
-          <div
-            style={{
-              fontSize: "var(--fs-caption)",
-              color: "var(--text-tertiary)",
-              marginBottom: 4,
-            }}
-          >
-            버린 카드
-          </div>
-          <div className="flex flex-wrap justify-center gap-1">
-            {s.discarded.map((c, i) => (
-              <CardView
-                key={`d-${i}-${c.rank}-${c.suit}`}
-                card={c}
-                size="sm"
-                faded
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

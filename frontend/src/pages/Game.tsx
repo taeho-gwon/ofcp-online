@@ -8,11 +8,30 @@ import {
   type TerminationKind,
 } from "../api/ws";
 import { OfcTable, type OfcSession } from "../components/OfcTable";
-import { PageHeader } from "../components/PageHeader";
 import { RulesModal } from "../components/RulesModal";
 import { Badge, Button, Modal } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
+
+const PAGE_MAX_WIDTH = 1200;
+
+const heroTitleStyle = {
+  fontSize: "var(--fs-display)",
+  fontWeight: 700,
+  letterSpacing: "var(--tracking-tight)",
+  margin: 0,
+  lineHeight: 1.1,
+};
+
+const heroMetaStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap" as const,
+  fontSize: "var(--fs-body-sm)",
+  color: "var(--text-secondary)",
+  marginTop: 10,
+};
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -94,48 +113,45 @@ export function Game() {
   }
 
   return (
-    <div className="min-h-screen p-4 flex flex-col gap-3 pb-12">
-      <PageHeader
-        back={{ label: "← 로비", to: "/" }}
-        title={
-          gameState ? (
-            <div className="flex items-center gap-2">
-              {gameState.is_game_over ? (
-                <Badge>GAME OVER</Badge>
-              ) : (
-                <>
-                  {gameState.is_bonus_round && (
-                    <Badge tone="accent">★ FantasyLand</Badge>
-                  )}
-                  <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "var(--fs-body-sm)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    R {gameState.round_number}
-                    <span style={{ color: "var(--text-tertiary)" }}>
-                      /{gameState.max_rounds}
+    <div className="min-h-screen flex flex-col items-center p-6 pb-12">
+      <div
+        className="w-full flex flex-col gap-3"
+        style={{ maxWidth: PAGE_MAX_WIDTH }}
+      >
+        <header className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 style={heroTitleStyle}>
+              {gameState?.is_game_over ? "게임 종료" : "게임 진행"}
+            </h1>
+            {gameState && (
+              <div style={heroMetaStyle}>
+                {!gameState.is_game_over && (
+                  <>
+                    {gameState.is_bonus_round && (
+                      <Badge tone="accent">★ FantasyLand</Badge>
+                    )}
+                    <span style={{ fontFamily: "var(--font-mono)" }}>
+                      R {gameState.round_number}
+                      <span style={{ color: "var(--text-tertiary)" }}>
+                        /{gameState.max_rounds}
+                      </span>
                     </span>
-                  </span>
-                </>
-              )}
-              <span style={{ color: "var(--text-tertiary)" }}>·</span>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--fs-caption)",
-                  color: "var(--text-tertiary)",
-                }}
-              >
-                {gameId}
-              </span>
-            </div>
-          ) : null
-        }
-        rightActions={
-          <>
+                    <span style={{ color: "var(--text-tertiary)" }}>·</span>
+                  </>
+                )}
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "var(--fs-caption)",
+                    color: "var(--text-tertiary)",
+                  }}
+                >
+                  {gameId}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <ConnectionBadge status={status} />
             <Button
               type="button"
@@ -146,25 +162,33 @@ export function Game() {
             >
               룰
             </Button>
-          </>
-        }
-      />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+            >
+              ← 로비
+            </Button>
+          </div>
+        </header>
 
-      <OfcTable session={session} />
+        <OfcTable session={session} />
 
-      {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} />}
+        {rulesOpen && <RulesModal onClose={() => setRulesOpen(false)} />}
 
-      {termination && (
-        <TerminationModal
-          kind={termination}
-          onRetry={() => {
-            setTermination(null);
-            setRetryNonce((n) => n + 1);
-          }}
-          onLobby={() => navigate("/")}
-          onLogin={() => navigate("/login")}
-        />
-      )}
+        {termination && (
+          <TerminationModal
+            kind={termination}
+            onRetry={() => {
+              setTermination(null);
+              setRetryNonce((n) => n + 1);
+            }}
+            onLobby={() => navigate("/")}
+            onLogin={() => navigate("/login")}
+          />
+        )}
+      </div>
     </div>
   );
 }

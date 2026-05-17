@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { checkNickname, signup } from "../api/auth";
 import { ApiError } from "../api/client";
+import type { Card as CardType } from "../api/types";
+import { CardView } from "../components/Card";
 import { Button, Input } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
@@ -15,6 +17,81 @@ interface NetResult {
   nickname: string;
   available: boolean;
 }
+
+interface FanItem {
+  card: CardType;
+  rotate: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+const HERO_FAN: FanItem[] = [
+  { card: { rank: 14, suit: 4 }, rotate: -16, offsetX: 0, offsetY: 28 },
+  { card: { rank: 13, suit: 3 }, rotate: -5, offsetX: 60, offsetY: 4 },
+  { card: { rank: 12, suit: 2 }, rotate: 5, offsetX: 130, offsetY: 4 },
+  { card: { rank: 11, suit: 1 }, rotate: 16, offsetX: 190, offsetY: 28 },
+];
+
+function HeroCardFan() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "relative",
+        width: 280,
+        height: 160,
+        marginTop: 8,
+      }}
+    >
+      {HERO_FAN.map((h, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: h.offsetX,
+            top: h.offsetY,
+            transform: `rotate(${h.rotate}deg)`,
+            transformOrigin: "center bottom",
+          }}
+        >
+          <CardView card={h.card} size="md" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const heroTitleStyle = {
+  fontSize: "var(--fs-display)",
+  fontWeight: 700,
+  letterSpacing: "var(--tracking-tight)",
+  margin: 0,
+  color: "var(--text-primary)",
+  lineHeight: 1.1,
+};
+
+const heroSubtitleStyle = {
+  fontSize: "var(--fs-body-lg)",
+  color: "var(--text-secondary)",
+  margin: "10px 0 0",
+};
+
+const heroListStyle = {
+  listStyle: "none",
+  padding: 0,
+  margin: 0,
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 8,
+  fontSize: "var(--fs-body)",
+  color: "var(--text-secondary)",
+};
+
+const formTitleStyle = {
+  fontSize: "var(--fs-h3)",
+  fontWeight: 600,
+  margin: 0,
+};
 
 export function NicknameSetup() {
   const navigate = useNavigate();
@@ -112,58 +189,67 @@ export function NicknameSetup() {
   const inputError = format === "invalid" || remote === "taken";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 pb-12">
+    <div className="min-h-screen flex items-center justify-center p-6 pb-12">
       <div
-        className="card flex flex-col gap-4"
-        style={{ maxWidth: 360, width: "100%" }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center w-full"
+        style={{ maxWidth: 1080 }}
       >
-        <h1
-          style={{
-            fontSize: "var(--fs-h3)",
-            fontWeight: 700,
-            letterSpacing: "var(--tracking-tight)",
-            margin: 0,
-          }}
-        >
-          닉네임 설정
-        </h1>
-        {signupEmail && (
-          <div
-            style={{
-              fontSize: "var(--fs-caption)",
-              color: "var(--text-tertiary)",
-            }}
-          >
-            {signupEmail}
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 style={heroTitleStyle}>OFC Online</h1>
+            <p style={heroSubtitleStyle}>Pineapple OFC 멀티플레이</p>
           </div>
-        )}
-        <div className="field">
-          <Input
-            autoFocus
-            type="text"
-            value={nickname}
-            maxLength={16}
-            onChange={(e) => setNickname(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) handleSubmit();
-            }}
-            placeholder="닉네임"
-            error={inputError}
-          />
-          {hint && (
-            <span className="field-hint" style={{ color: hint.color }}>
-              {hint.text}
-            </span>
-          )}
+          <ul style={heroListStyle}>
+            <li>· 실시간 2~3인 대전</li>
+            <li>· 12라운드 / 6라운드 모드</li>
+            <li>· 튜토리얼 4개 시나리오로 룰 학습</li>
+          </ul>
+          <HeroCardFan />
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
+
+        <div
+          className="card"
+          style={{ width: "100%", maxWidth: 420, justifySelf: "center", padding: 28, gap: 18 }}
         >
-          {submitting ? "가입 중..." : "가입 완료"}
-        </Button>
+          <h2 style={formTitleStyle}>닉네임 설정</h2>
+          {signupEmail && (
+            <div
+              style={{
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              {signupEmail}
+            </div>
+          )}
+          <div className="field">
+            <Input
+              autoFocus
+              type="text"
+              value={nickname}
+              maxLength={16}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSubmit) handleSubmit();
+              }}
+              placeholder="닉네임"
+              error={inputError}
+            />
+            {hint && (
+              <span className="field-hint" style={{ color: hint.color }}>
+                {hint.text}
+              </span>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+          >
+            {submitting ? "가입 중..." : "가입 완료"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -108,10 +108,10 @@ kbd {
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-fg);
-  padding: 0 14px;
-  height: 36px;
+  padding: 0 18px;
+  height: 44px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.005em;
   cursor: pointer;
@@ -166,19 +166,19 @@ kbd {
   --btn-bg-hover: var(--accent-soft);
 }
 .btn--sm {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13.5px;
   border-radius: var(--radius-sm);
 }
 .btn--lg {
-  height: 44px;
-  padding: 0 20px;
-  font-size: 15px;
+  height: 52px;
+  padding: 0 24px;
+  font-size: 16.5px;
   border-radius: var(--radius-md);
 }
 .btn--icon {
-  width: 36px;
+  width: 44px;
   padding: 0;
 }
 
@@ -480,6 +480,50 @@ kbd {
   background: var(--bg-elevated);
   box-shadow: var(--shadow-md);
   border-color: transparent;
+}
+
+/* =============================================================
+   LIST ITEM  (카드 안에 들어가는 클릭 가능한 row — History 등)
+   ============================================================= */
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.list-item:last-child {
+  border-bottom: none;
+}
+.list-item:hover {
+  background: var(--bg-sunken);
+  text-decoration: none;
+}
+
+/* =============================================================
+   SCENARIO CARD  (클릭 가능한 카드 — TutorialList 등)
+   ============================================================= */
+.scenario-card {
+  text-align: left;
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.scenario-card:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+}
+.scenario-card:focus-visible {
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 1px;
 }
 
 /* =============================================================

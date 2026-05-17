@@ -1,4 +1,5 @@
 import type { Phase } from "../api/types";
+import { Button } from "./ui";
 
 interface Props {
   phase: Phase;
@@ -8,6 +9,11 @@ interface Props {
   onCancel: () => void;
   onShowResult?: () => void;
 }
+
+const statusTextStyle = {
+  color: "var(--text-tertiary)",
+  fontSize: "var(--fs-body)",
+};
 
 export function ActionBar({
   phase,
@@ -25,16 +31,12 @@ export function ActionBar({
           ? "게임 종료"
           : "라운드 종료";
     return (
-      <div className="flex flex-col items-center gap-2 text-slate-500">
-        <div>{label}</div>
+      <div className="flex flex-col items-center gap-2">
+        <div style={statusTextStyle}>{label}</div>
         {(phase === "done" || phase === "game_over") && onShowResult && (
-          <button
-            type="button"
-            onClick={onShowResult}
-            className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50"
-          >
+          <Button type="button" variant="secondary" onClick={onShowResult}>
             결과 보기
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -42,7 +44,7 @@ export function ActionBar({
 
   if (!isMyTurn) {
     return (
-      <div className="text-center text-slate-500 text-sm">
+      <div className="text-center" style={statusTextStyle}>
         상대 차례를 기다리는 중...
       </div>
     );
@@ -50,21 +52,17 @@ export function ActionBar({
 
   return (
     <div className="flex gap-2">
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onCancel}
         disabled={!hasPending}
-        className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-default"
       >
         취소
-      </button>
-      <button
-        type="button"
-        onClick={onConfirm}
-        className="px-4 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700"
-      >
+      </Button>
+      <Button type="button" variant="primary" onClick={onConfirm}>
         턴 종료
-      </button>
+      </Button>
     </div>
   );
 }

@@ -24,8 +24,8 @@ interface Dim {
 }
 
 const DIM: Record<CardSize, Dim> = {
-  sm: { width: 44, height: 56, cornerRank: 12, cornerSuit: 10, centerSuit: 22, pad: 4 },
-  md: { width: 64, height: 80, cornerRank: 16, cornerSuit: 13, centerSuit: 34, pad: 5 },
+  sm: { width: 56, height: 72, cornerRank: 15, cornerSuit: 13, centerSuit: 28, pad: 5 },
+  md: { width: 80, height: 104, cornerRank: 20, cornerSuit: 16, centerSuit: 42, pad: 6 },
 };
 
 const CARD_BG = "#ffffff";

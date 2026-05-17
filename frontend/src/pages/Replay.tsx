@@ -8,9 +8,10 @@ import {
   type GameEventOut,
   type RoundEndPayload,
 } from "../api/records";
-import { PageHeader } from "../components/PageHeader";
 import { ReplayBoard } from "../components/ReplayBoard";
 import { Button } from "../components/ui";
+
+const PAGE_MAX_WIDTH = 960;
 
 const RULESET_LABEL: Record<string, string> = {
   pineapple: "12라운드",
@@ -21,6 +22,20 @@ interface RoundView {
   seq: number;
   payload: RoundEndPayload;
 }
+
+const heroTitleStyle = {
+  fontSize: "var(--fs-display)",
+  fontWeight: 700,
+  letterSpacing: "var(--tracking-tight)",
+  margin: 0,
+  lineHeight: 1.1,
+};
+
+const heroSubtitleStyle = {
+  fontSize: "var(--fs-body-lg)",
+  color: "var(--text-secondary)",
+  margin: "10px 0 0",
+};
 
 const mutedTextStyle = {
   fontSize: "var(--fs-body-sm)",
@@ -82,124 +97,135 @@ export function Replay() {
     .map((p) => p.user_id);
 
   return (
-    <div className="min-h-screen p-4 pb-12">
-      <PageHeader
-        title="리플레이"
-        back={{ label: "← 기록 목록", to: "/history" }}
-        maxWidth={896}
-      />
+    <div className="min-h-screen flex flex-col items-center p-6 pb-12">
+      <div className="w-full" style={{ maxWidth: PAGE_MAX_WIDTH }}>
+        <header className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 style={heroTitleStyle}>리플레이</h1>
+            <p style={heroSubtitleStyle}>지난 게임을 라운드별로 다시 봅니다.</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/history")}
+          >
+            ← 기록 목록
+          </Button>
+        </header>
 
-      <div className="card mx-auto mb-4" style={{ maxWidth: 896 }}>
-        <div
-          className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
-          style={{ fontSize: "var(--fs-body-sm)" }}
-        >
-          <span style={labelStyle}>규칙</span>
-          <span style={{ fontWeight: 600 }}>
-            {RULESET_LABEL[detail.ruleset] ?? detail.ruleset}
-          </span>
-          <span style={labelStyle}>·</span>
-          <span style={labelStyle}>라운드</span>
-          <span style={{ fontWeight: 600 }}>{detail.round_count}</span>
-          {detail.ended_at && (
-            <>
-              <span style={labelStyle}>·</span>
-              <span style={labelStyle}>
-                {new Date(detail.ended_at).toLocaleString()}
-              </span>
-            </>
-          )}
-        </div>
-        <div
-          className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2"
-          style={{ fontSize: "var(--fs-body-sm)" }}
-        >
-          {detail.players.map((p) => (
-            <div
-              key={p.user_id}
-              className="flex items-center justify-between"
-              style={{
-                background: "var(--bg-sunken)",
-                borderRadius: "var(--radius-md)",
-                padding: "6px 12px",
-              }}
-            >
-              <span style={{ fontWeight: 600 }} className="truncate">
-                {p.nickname}
-              </span>
-              <span
+        <div className="card mb-4">
+          <div
+            className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+            style={{ fontSize: "var(--fs-body-sm)" }}
+          >
+            <span style={labelStyle}>규칙</span>
+            <span style={{ fontWeight: 600 }}>
+              {RULESET_LABEL[detail.ruleset] ?? detail.ruleset}
+            </span>
+            <span style={labelStyle}>·</span>
+            <span style={labelStyle}>라운드</span>
+            <span style={{ fontWeight: 600 }}>{detail.round_count}</span>
+            {detail.ended_at && (
+              <>
+                <span style={labelStyle}>·</span>
+                <span style={labelStyle}>
+                  {new Date(detail.ended_at).toLocaleString()}
+                </span>
+              </>
+            )}
+          </div>
+          <div
+            className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2"
+            style={{ fontSize: "var(--fs-body-sm)" }}
+          >
+            {detail.players.map((p) => (
+              <div
+                key={p.user_id}
+                className="flex items-center justify-between"
                 style={{
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--text-secondary)",
+                  background: "var(--bg-sunken)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "6px 12px",
                 }}
               >
-                {p.final_score ?? "-"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto flex flex-col gap-3">
-        {rounds.length === 0 && (
-          <div
-            className="card"
-            style={{
-              padding: 24,
-              textAlign: "center",
-              color: "var(--text-tertiary)",
-              fontSize: "var(--fs-body-sm)",
-            }}
-          >
-            완료된 라운드가 없습니다.
-          </div>
-        )}
-        {rounds.map((r, idx) => (
-          <section
-            key={r.seq}
-            className="card"
-            style={{ padding: 12, gap: 8 }}
-          >
-            <header
-              className="flex items-center justify-between"
-              style={{ fontSize: "var(--fs-body-sm)" }}
-            >
-              <span style={{ fontWeight: 600 }}>
-                {r.payload.is_bonus_round
-                  ? `R${r.payload.round_number} 보너스`
-                  : `R${r.payload.round_number}`}
+                <span style={{ fontWeight: 600 }} className="truncate">
+                  {p.nickname}
+                </span>
                 <span
                   style={{
-                    color: "var(--text-tertiary)",
-                    fontSize: "var(--fs-caption)",
-                    marginLeft: 8,
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--text-secondary)",
                   }}
                 >
-                  ({idx + 1}번째)
+                  {p.final_score ?? "-"}
                 </span>
-              </span>
-            </header>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {orderedUserIds.map((uid) => {
-                const b = r.payload.boards[uid];
-                if (!b) return null;
-                return (
-                  <ReplayBoard
-                    key={uid}
-                    nickname={nicknameOf(uid)}
-                    top={b.top}
-                    middle={b.middle}
-                    bottom={b.bottom}
-                    isFoul={b.is_foul}
-                    cumulativeScore={r.payload.scores[uid] ?? 0}
-                    delta={r.payload.deltas[uid] ?? 0}
-                    nextFantasyCards={r.payload.next_fantasy_cards[uid] ?? null}
-                  />
-                );
-              })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {rounds.length === 0 && (
+            <div
+              className="card"
+              style={{
+                padding: 24,
+                textAlign: "center",
+                color: "var(--text-tertiary)",
+                fontSize: "var(--fs-body-sm)",
+              }}
+            >
+              완료된 라운드가 없습니다.
             </div>
-          </section>
-        ))}
+          )}
+          {rounds.map((r, idx) => (
+            <section
+              key={r.seq}
+              className="card"
+              style={{ padding: 12, gap: 8 }}
+            >
+              <header
+                className="flex items-center justify-between"
+                style={{ fontSize: "var(--fs-body-sm)" }}
+              >
+                <span style={{ fontWeight: 600 }}>
+                  {r.payload.is_bonus_round
+                    ? `R${r.payload.round_number} 보너스`
+                    : `R${r.payload.round_number}`}
+                  <span
+                    style={{
+                      color: "var(--text-tertiary)",
+                      fontSize: "var(--fs-caption)",
+                      marginLeft: 8,
+                    }}
+                  >
+                    ({idx + 1}번째)
+                  </span>
+                </span>
+              </header>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {orderedUserIds.map((uid) => {
+                  const b = r.payload.boards[uid];
+                  if (!b) return null;
+                  return (
+                    <ReplayBoard
+                      key={uid}
+                      nickname={nicknameOf(uid)}
+                      top={b.top}
+                      middle={b.middle}
+                      bottom={b.bottom}
+                      isFoul={b.is_foul}
+                      cumulativeScore={r.payload.scores[uid] ?? 0}
+                      delta={r.payload.deltas[uid] ?? 0}
+                      nextFantasyCards={r.payload.next_fantasy_cards[uid] ?? null}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
