@@ -32,6 +32,43 @@ React + Vite + TypeScript 프론트엔드, FastAPI + Python 3.13 백엔드, WebS
 
 ---
 
+## 개발 방법론 — Superpowers
+
+[obra/superpowers](https://github.com/obra/superpowers) Claude Code 플러그인의 워크플로우를 따른다. 설치된 skills는 세션에서 자동 트리거된다.
+
+### 7단계 워크플로우
+
+새 기능·비자명한 변경 시 다음 순서를 거친다:
+
+1. **Brainstorm** — 요구사항 소크라테스식 정리
+2. **Spec** — 사양 문서화 (수용 기준 포함)
+3. **Plan** — 구현 계획 분해
+4. **TDD** — RED/GREEN/REFACTOR (적용 범위는 아래 참고)
+5. **Subagent Development** — 독립 작업은 git worktree에서 sub-agent로 병렬 실행
+6. **Review** — 체계적 코드 리뷰
+7. **Finalize** — 머지 전 정리
+
+### TDD 적용 범위 (1단계)
+
+- **강제**: `backend/` 게임 도메인 로직 — 핸드 평가, 점수 계산, Foul 판정, FantasyLand 진입·연속 조건, Royalty 계산, 패 비교.
+- **권장**:
+  - 백엔드 WebSocket 핸들러·상태 전이·이벤트 디스패치.
+  - 프론트엔드 Zustand 스토어(리듀서·액션), 커스텀 훅 로직, 순수 유틸 함수(카드 정렬·포맷터 등).
+- **면제**: 프론트엔드 컴포넌트 렌더링·페이지 조립·디자인 토큰·CSS, 인프라(Caddy·docker-compose) 설정.
+
+이유: 게임 룰과 상태 관리는 회귀 위험이 크지만, 시각 컴포넌트는 시각 검증이 더 효과적이다. 2단계 진입 시 컴포넌트 행동 테스트(RTL) 도입 여부를 재검토한다.
+
+### 워크플로우 면제 케이스
+
+다음은 7단계를 건너뛰고 바로 수정한다:
+
+- 1-line 버그 픽스, 오타·문구·로그 메시지 수정
+- 의존성 버전 업, lockfile 갱신
+- 인프라 설정값 조정 (포트, 환경변수 등)
+- 디자인 토큰·CSS 조정, 컴포넌트 시각 보정
+
+---
+
 ## 프론트엔드 디자인 시스템
 
 페이지·컴포넌트 작성 시 다음 규칙을 따른다.
