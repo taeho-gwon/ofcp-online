@@ -2,6 +2,7 @@ import type { Card } from "../api/types";
 import { CardView, EmptySlot } from "./Card";
 
 interface Props {
+  playerId: string;
   nickname: string;
   top: Card[];
   middle: Card[];
@@ -15,6 +16,7 @@ interface Props {
 const ROW_CAP = { top: 3, middle: 5, bottom: 5 };
 
 export function ReplayBoard({
+  playerId,
   nickname,
   top,
   middle,
@@ -65,10 +67,19 @@ export function ReplayBoard({
           return (
             <div key={row} className="flex justify-center gap-1">
               {cards.map((c, i) => (
-                <CardView key={`${row}-${i}`} card={c} size="sm" />
+                <CardView
+                  key={`${row}-${i}`}
+                  card={c}
+                  size="sm"
+                  playerId={playerId}
+                />
               ))}
               {Array.from({ length: empty }).map((_, i) => (
-                <EmptySlot key={`${row}-e-${i}`} size="sm" />
+                <EmptySlot
+                  key={`${row}-e-${i}`}
+                  size="sm"
+                  playerId={playerId}
+                />
               ))}
             </div>
           );

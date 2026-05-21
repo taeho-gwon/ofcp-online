@@ -315,7 +315,11 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
             </div>
             <div className="flex gap-1">
               {d.myHand.map((c, i) => (
-                <CardView key={`mh-${i}-${c.rank}-${c.suit}`} card={c} />
+                <CardView
+                  key={`mh-${i}-${c.rank}-${c.suit}`}
+                  card={c}
+                  playerId=""
+                />
               ))}
             </div>
           </>
@@ -384,6 +388,7 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
                   card={c}
                   size="sm"
                   faded
+                  playerId=""
                 />
               ))}
               <span className="w-2" />
@@ -393,6 +398,7 @@ function NormalTutorialInner({ scenario }: { scenario: NormalScenario }) {
                   card={c}
                   size="sm"
                   faded
+                  playerId=""
                 />
               ))}
             </div>

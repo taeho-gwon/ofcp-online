@@ -160,10 +160,19 @@ export function PlayerBoard({
               className={`relative flex justify-center gap-1 rounded-md p-1 ${rowRing}`}
             >
               {placed.map((c, i) => (
-                <CardView key={`p-${i}`} card={c} size={size} />
+                <CardView
+                  key={`p-${i}`}
+                  card={c}
+                  size={size}
+                  playerId={player.player_id}
+                />
               ))}
               {Array.from({ length: hidden }).map((_, i) => (
-                <CardBack key={`h-${i}`} size={size} />
+                <CardBack
+                  key={`h-${i}`}
+                  size={size}
+                  playerId={player.player_id}
+                />
               ))}
               {pending.map((p) => (
                 <CardView
@@ -171,6 +180,7 @@ export function PlayerBoard({
                   card={p.card}
                   size={size}
                   faded
+                  playerId={player.player_id}
                   onClick={
                     onPendingClick ? () => onPendingClick(p.handIdx) : undefined
                   }
@@ -181,6 +191,7 @@ export function PlayerBoard({
                   key={`e-${i}`}
                   size={size}
                   highlighted={isSelected}
+                  playerId={player.player_id}
                   onClick={
                     rowClickable ? () => onRowSelect!(row) : undefined
                   }

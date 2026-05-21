@@ -307,6 +307,7 @@ export function Practice() {
                   card={c}
                   size="sm"
                   faded
+                  playerId=""
                 />
               ))}
             </div>

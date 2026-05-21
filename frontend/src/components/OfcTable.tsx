@@ -287,6 +287,7 @@ export function OfcTable({ session }: Props) {
             selectedIdx={selectedCardIdx}
             onPlace={handleHandPlace}
             onUnplace={unplace}
+            myPlayerId={myPlayerId}
           />
         </section>
       )}

@@ -231,7 +231,12 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
             </div>
             <div className="flex flex-wrap justify-center gap-1">
               {myHand.map((c, i) => (
-                <CardView key={`mh-${i}-${c.rank}-${c.suit}`} card={c} size="sm" />
+                <CardView
+                  key={`mh-${i}-${c.rank}-${c.suit}`}
+                  card={c}
+                  size="sm"
+                  playerId=""
+                />
               ))}
             </div>
           </>
@@ -302,6 +307,7 @@ export function FantasyTutorial({ scenario }: { scenario: FantasyScenario }) {
                   card={c}
                   size="sm"
                   faded
+                  playerId=""
                 />
               ))}
             </div>
