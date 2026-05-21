@@ -1,9 +1,11 @@
 import { create } from "zustand";
-import {
+import type {
   CosmeticOut,
   LoadoutOut,
   LoadoutUpdateIn,
   MyCosmeticsOut,
+} from "../api/cosmetics";
+import {
   getCatalog,
   getMyCosmetics,
   updateLoadout as updateLoadoutApi,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CosmeticCategory } from "../../api/cosmetics";
+import type { CosmeticCategory } from "../../api/cosmetics";
 import { useCosmeticsStore } from "../../store/cosmeticsStore";
 import { Button } from "../ui";
 

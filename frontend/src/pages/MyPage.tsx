@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { CosmeticsSection } from "../components/MyPage/CosmeticsSection";
 import { Button } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
 
@@ -106,9 +107,10 @@ export function MyPage() {
             <ul style={upcomingListStyle}>
               <li>· 통계 (승률·평균 점수·FantasyLand 진입률)</li>
               <li>· 닉네임 변경</li>
-              <li>· 카드 스킨·코스메틱</li>
             </ul>
           </section>
+
+          <CosmeticsSection />
 
           <section className="card">
             <h2 style={sectionTitleStyle}>계정</h2>
