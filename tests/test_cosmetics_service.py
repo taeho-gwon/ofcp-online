@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
@@ -5,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cosmetics import repository as cosmetics_repo
 from app.cosmetics import service as cosmetics_service
-from app.cosmetics.models import Cosmetic
+from app.cosmetics.models import Cosmetic, UserCosmeticInventory
+from app.cosmetics.schemas import LoadoutUpdateIn
 from app.users import service as users_service
 
 
@@ -96,3 +99,92 @@ async def test_grant_defaults_idempotent_preserves_user_selection(
 
     loadout = await cosmetics_repo.get_loadout_for_user(db_session, user.id)
     assert loadout["card_back"] == ocean.id
+
+
+@pytest.mark.asyncio
+async def test_update_loadout_happy(db_session: AsyncSession, _seed_catalog):
+    user = await _make_user(db_session, "carol")
+    await cosmetics_service.grant_defaults(db_session, user.id)
+
+    catalog = {
+        (c.category, c.code): c.id
+        for c in await cosmetics_repo.list_all_cosmetics(db_session)
+    }
+    payload = LoadoutUpdateIn(
+        card_back=catalog[("card_back", "back.ocean")],
+        card_face=catalog[("card_face", "face.modern")],
+        table_theme=catalog[("table_theme", "table.walnut")],
+        title=catalog[("title", "title.fl_demon")],
+    )
+
+    result = await cosmetics_service.update_loadout(db_session, user.id, payload)
+    await db_session.flush()
+
+    assert result.card_back == catalog[("card_back", "back.ocean")]
+    loadout = await cosmetics_repo.get_loadout_for_user(db_session, user.id)
+    assert loadout["card_back"] == catalog[("card_back", "back.ocean")]
+    assert loadout["title"] == catalog[("title", "title.fl_demon")]
+
+
+@pytest.mark.asyncio
+async def test_update_loadout_not_owned(db_session: AsyncSession, _seed_catalog):
+    """다른 user의 cosmetic을 owner 검사로 거부."""
+    user = await _make_user(db_session, "dave")
+    await cosmetics_service.grant_defaults(db_session, user.id)
+
+    catalog = {c.code: c for c in await cosmetics_repo.list_all_cosmetics(db_session)}
+    ocean = catalog["back.ocean"]
+    # owner 검사 시뮬레이션: 인벤토리에서 한 row 삭제 후 그걸 장착 시도
+    await db_session.execute(
+        UserCosmeticInventory.__table__.delete().where(
+            (UserCosmeticInventory.user_id == user.id)
+            & (UserCosmeticInventory.cosmetic_id == ocean.id)
+        )
+    )
+    await db_session.flush()
+
+    payload = LoadoutUpdateIn(
+        card_back=ocean.id,
+        card_face=catalog["face.classic"].id,
+        table_theme=catalog["table.green"].id,
+        title=catalog["title.beginner"].id,
+    )
+
+    with pytest.raises(cosmetics_service.LoadoutValidationError):
+        await cosmetics_service.update_loadout(db_session, user.id, payload)
+
+
+@pytest.mark.asyncio
+async def test_update_loadout_category_mismatch(
+    db_session: AsyncSession, _seed_catalog
+):
+    """title 슬롯에 card_back을 보내면 거부."""
+    user = await _make_user(db_session, "eve")
+    await cosmetics_service.grant_defaults(db_session, user.id)
+    catalog = {c.code: c for c in await cosmetics_repo.list_all_cosmetics(db_session)}
+
+    payload = LoadoutUpdateIn(
+        card_back=catalog["back.navy"].id,
+        card_face=catalog["face.classic"].id,
+        table_theme=catalog["table.green"].id,
+        title=catalog["back.ocean"].id,  # 카테고리 불일치
+    )
+    with pytest.raises(cosmetics_service.LoadoutValidationError):
+        await cosmetics_service.update_loadout(db_session, user.id, payload)
+
+
+@pytest.mark.asyncio
+async def test_update_loadout_unknown_cosmetic(db_session: AsyncSession, _seed_catalog):
+    """존재하지 않는 cosmetic_id 거부."""
+    user = await _make_user(db_session, "frank")
+    await cosmetics_service.grant_defaults(db_session, user.id)
+    catalog = {c.code: c for c in await cosmetics_repo.list_all_cosmetics(db_session)}
+
+    payload = LoadoutUpdateIn(
+        card_back=uuid.uuid4(),  # 존재하지 않음
+        card_face=catalog["face.classic"].id,
+        table_theme=catalog["table.green"].id,
+        title=catalog["title.beginner"].id,
+    )
+    with pytest.raises(cosmetics_service.LoadoutValidationError):
+        await cosmetics_service.update_loadout(db_session, user.id, payload)
