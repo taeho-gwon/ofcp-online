@@ -54,8 +54,8 @@ export function Hand({
   return (
     <div className="flex flex-col items-center gap-2">
       {hand.length > 0 && (
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-slate-400 mr-1">정렬</span>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-slate-500 mr-1">정렬</span>
           <SortToggle
             label="숫자순"
             active={mode === "rank"}
@@ -111,10 +111,10 @@ function SortToggle({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2 py-0.5 rounded border transition-colors ${
+      className={`px-3 py-1.5 rounded-md border font-medium transition-colors ${
         active
-          ? "bg-slate-800 text-white border-slate-800"
-          : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+          ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
       }`}
     >
       {label}

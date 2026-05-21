@@ -95,13 +95,13 @@ export function PlayerBoard({
 
   return (
     <div className="relative flex flex-col gap-2">
-      <div className="flex items-center justify-between text-sm px-1">
-        <span className="flex flex-col gap-0.5 truncate">
+      <div className="flex items-center justify-between text-base px-1">
+        <span className="flex flex-col gap-1 truncate">
           <TitleBadge variant={title} />
-          <span className="flex items-center gap-1.5 font-semibold truncate">
+          <span className="flex items-center gap-2 font-semibold truncate">
             {isDealer && (
               <span
-                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[10px] font-bold shadow-sm"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-400 text-white text-xs font-bold shadow-sm"
                 title="딜러"
               >
                 D
@@ -109,28 +109,28 @@ export function PlayerBoard({
             )}
             <span className="truncate">{label}</span>
             {isMe && (
-              <span className="text-emerald-700 text-xs">(나)</span>
+              <span className="text-emerald-700 text-sm">(나)</span>
             )}
           </span>
         </span>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-sm">
           {isFoul && (
-            <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded font-semibold">
+            <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold">
               FOUL
             </span>
           )}
           {player.is_fantasy && (
-            <span className="px-1.5 py-0.5 bg-fuchsia-100 text-fuchsia-700 rounded">
+            <span className="px-2 py-1 bg-fuchsia-100 text-fuchsia-700 rounded font-semibold">
               FL
             </span>
           )}
           {player.next_fantasy_cards && (
-            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded font-semibold">
               ★{player.next_fantasy_cards}
             </span>
           )}
           <span
-            className={`font-mono ${
+            className={`font-mono text-xl font-bold ${
               player.score > 0
                 ? "text-slate-800"
                 : "text-rose-600"

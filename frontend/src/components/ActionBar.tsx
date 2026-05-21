@@ -34,7 +34,12 @@ export function ActionBar({
       <div className="flex flex-col items-center gap-2">
         <div style={statusTextStyle}>{label}</div>
         {(phase === "done" || phase === "game_over") && onShowResult && (
-          <Button type="button" variant="secondary" onClick={onShowResult}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={onShowResult}
+          >
             결과 보기
           </Button>
         )}
@@ -51,16 +56,17 @@ export function ActionBar({
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-3">
       <Button
         type="button"
         variant="secondary"
+        size="lg"
         onClick={onCancel}
         disabled={!hasPending}
       >
         취소
       </Button>
-      <Button type="button" variant="primary" onClick={onConfirm}>
+      <Button type="button" variant="primary" size="lg" onClick={onConfirm}>
         턴 종료
       </Button>
     </div>

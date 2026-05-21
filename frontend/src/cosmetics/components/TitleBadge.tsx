@@ -5,10 +5,10 @@ export function TitleBadge({ variant }: { variant: TitleVariant }) {
     <span
       style={{
         display: "inline-block",
-        fontSize: 10,
+        fontSize: 12,
         lineHeight: 1.2,
-        padding: "2px 6px",
-        borderRadius: 4,
+        padding: "3px 8px",
+        borderRadius: 5,
         fontWeight: 700,
         ...variant.style,
       }}
