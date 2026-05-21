@@ -26,7 +26,7 @@ describe("usePlayerCosmetics", () => {
   it("returns default fallback when nothing is set", () => {
     const { result } = renderHook(() => usePlayerCosmetics("anyone"));
     expect(result.current.cardBack.code).toBe("back.navy");
-    expect(result.current.cardFace.code).toBe("face.classic");
+    expect(result.current.cardFace.code).toBe("face.2color");
     expect(result.current.table.code).toBe("table.green");
     expect(result.current.title.code).toBe("title.beginner");
   });
@@ -39,7 +39,7 @@ describe("usePlayerCosmetics", () => {
             player_id: "opp",
             cosmetics: {
               card_back: "back.ocean",
-              card_face: "face.modern",
+              card_face: "face.4color",
               table_theme: "table.walnut",
               title: "title.fl_demon",
             },
@@ -50,7 +50,7 @@ describe("usePlayerCosmetics", () => {
 
     const { result } = renderHook(() => usePlayerCosmetics("opp"));
     expect(result.current.cardBack.code).toBe("back.ocean");
-    expect(result.current.cardFace.code).toBe("face.modern");
+    expect(result.current.cardFace.code).toBe("face.4color");
     expect(result.current.table.code).toBe("table.walnut");
     expect(result.current.title.code).toBe("title.fl_demon");
   });

@@ -1,20 +1,19 @@
 import { ClassicEmptySlot } from "../components/ClassicEmptySlot";
-import { ClassicFace } from "../components/ClassicFace";
-import { ModernFace } from "../components/ModernFace";
+import { FourColorFace, TwoColorFace } from "../components/SuitFace";
 import { DEFAULT_CODES } from "../defaults";
 import type { CardFaceVariant } from "../types";
 
 export const CARD_FACES: Record<string, CardFaceVariant> = {
-  "face.classic": {
-    code: "face.classic",
-    name: "클래식",
-    Face: ClassicFace,
+  "face.2color": {
+    code: "face.2color",
+    name: "2색 덱",
+    Face: TwoColorFace,
     EmptySlot: ClassicEmptySlot,
   },
-  "face.modern": {
-    code: "face.modern",
-    name: "모던",
-    Face: ModernFace,
+  "face.4color": {
+    code: "face.4color",
+    name: "4색 덱",
+    Face: FourColorFace,
     EmptySlot: ClassicEmptySlot,
   },
 };

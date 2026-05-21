@@ -34,10 +34,33 @@ const DIM: Record<CardSize, Dim> = {
   },
 };
 
-export function ClassicFace({ card, size }: { card: Card; size: CardSize }) {
+/** 표준 포커덱 — 빨강(♦♥) / 검정(♣♠) 2색. */
+const TWO_COLOR: Record<number, string> = {
+  1: "#1a1a1a", // ♣ 검정
+  2: "#c2185b", // ♦ 빨강
+  3: "#c2185b", // ♥ 빨강
+  4: "#1a1a1a", // ♠ 검정
+};
+
+/** 4색 덱 — 각 suit 마다 고유 색. 가독성 강화. */
+const FOUR_COLOR: Record<number, string> = {
+  1: "#16a34a", // ♣ 초록
+  2: "#1d4ed8", // ♦ 파랑
+  3: "#c2185b", // ♥ 빨강
+  4: "#1a1a1a", // ♠ 검정
+};
+
+function SuitFace({
+  card,
+  size,
+  colorMap,
+}: {
+  card: Card;
+  size: CardSize;
+  colorMap: Record<number, string>;
+}) {
   const d = DIM[size];
-  const red = SUIT_IS_RED[card.suit];
-  const color = red ? "#c2185b" : "#1a1a1a";
+  const color = colorMap[card.suit] ?? (SUIT_IS_RED[card.suit] ? "#c2185b" : "#1a1a1a");
   return (
     <svg
       width={d.width}
@@ -78,4 +101,12 @@ export function ClassicFace({ card, size }: { card: Card; size: CardSize }) {
       </text>
     </svg>
   );
+}
+
+export function TwoColorFace({ card, size }: { card: Card; size: CardSize }) {
+  return <SuitFace card={card} size={size} colorMap={TWO_COLOR} />;
+}
+
+export function FourColorFace({ card, size }: { card: Card; size: CardSize }) {
+  return <SuitFace card={card} size={size} colorMap={FOUR_COLOR} />;
 }

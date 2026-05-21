@@ -24,8 +24,8 @@ COSMETIC_CATEGORIES = ("card_back", "card_face", "table_theme", "title")
 SEED_ROWS = [
     ("card_back", "back.navy", "네이비", True, 0),
     ("card_back", "back.ocean", "오션", False, 1),
-    ("card_face", "face.classic", "클래식", True, 0),
-    ("card_face", "face.modern", "모던", False, 1),
+    ("card_face", "face.2color", "2색 덱", True, 0),
+    ("card_face", "face.4color", "4색 덱", False, 1),
     ("table_theme", "table.green", "그린 펠트", True, 0),
     ("table_theme", "table.walnut", "월넛", False, 1),
     ("title", "title.beginner", "초보자", True, 0),

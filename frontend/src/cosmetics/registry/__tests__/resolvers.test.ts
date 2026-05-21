@@ -23,19 +23,19 @@ describe("resolveCardBack", () => {
 });
 
 describe("resolveCardFace", () => {
-  it("returns classic for known code", () => {
-    expect(resolveCardFace("face.classic").code).toBe("face.classic");
+  it("returns 2color for known code", () => {
+    expect(resolveCardFace("face.2color").code).toBe("face.2color");
   });
-  it("returns modern for known code", () => {
-    expect(resolveCardFace("face.modern").code).toBe("face.modern");
+  it("returns 4color for known code", () => {
+    expect(resolveCardFace("face.4color").code).toBe("face.4color");
   });
   it("falls back to default", () => {
-    expect(resolveCardFace("face.unknown").code).toBe("face.classic");
+    expect(resolveCardFace("face.unknown").code).toBe("face.2color");
   });
   it("CARD_FACES contains both seeds", () => {
     expect(Object.keys(CARD_FACES).sort()).toEqual([
-      "face.classic",
-      "face.modern",
+      "face.2color",
+      "face.4color",
     ]);
   });
 });
