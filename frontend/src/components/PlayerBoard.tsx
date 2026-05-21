@@ -94,11 +94,8 @@ export function PlayerBoard({
   const centerOverlay = animOverlay?.position === "center" ? animOverlay : null;
 
   return (
-    <div
-      className={`relative rounded-lg ${ring} p-4 flex flex-col gap-3`}
-      style={table.surfaceStyle}
-    >
-      <div className="flex items-center justify-between text-sm">
+    <div className="relative flex flex-col gap-2">
+      <div className="flex items-center justify-between text-sm px-1">
         <span className="flex flex-col gap-0.5 truncate">
           <TitleBadge variant={title} />
           <span className="flex items-center gap-1.5 font-semibold truncate">
@@ -145,6 +142,10 @@ export function PlayerBoard({
         </div>
       </div>
 
+      <div
+        className={`relative rounded-lg ${ring} p-4 flex flex-col gap-2`}
+        style={table.surfaceStyle}
+      >
       <div className={`relative flex flex-col gap-2 ${isFoul ? "opacity-50" : ""}`}>
         {ROWS.map((row) => {
           const placed = player.board[row];
@@ -218,6 +219,7 @@ export function PlayerBoard({
         </div>
       )}
       {centerOverlay && <CenterOverlay overlay={centerOverlay} />}
+      </div>
     </div>
   );
 }
