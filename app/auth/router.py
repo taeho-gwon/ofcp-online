@@ -17,6 +17,7 @@ from app.auth.schemas import (
 )
 from app.config import settings
 from app.core.db import get_session
+from app.cosmetics import service as cosmetics_service
 from app.users import repository as users_repo
 from app.users import service as users_service
 from app.users.schemas import UserOut
@@ -89,6 +90,7 @@ async def signup(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    await cosmetics_service.grant_defaults(session, user.id)
     await session.commit()
     return SignupResponse(
         tokens=_issue_pair(user.id), user=UserOut.model_validate(user)
@@ -140,6 +142,7 @@ async def dev_login(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
+    await cosmetics_service.grant_defaults(session, user.id)
     await session.commit()
     return DevLoginResponse(
         tokens=_issue_pair(user.id), user=UserOut.model_validate(user)

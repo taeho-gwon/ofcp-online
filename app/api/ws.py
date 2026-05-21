@@ -12,6 +12,7 @@ from app.auth.jwt import InvalidTokenError, verify_access
 from app.config import settings
 from app.core.db import get_engine
 from app.core.redis import get_redis
+from app.cosmetics import service as cosmetics_service
 from app.game.repository import GameLockError, GameRepository
 from app.game.schemas import (
     FantasyTurnMoveRequest,
@@ -54,7 +55,11 @@ class ConnectionManager:
                 del self._conns[game_id]
 
     async def broadcast(
-        self, game_id: str, state: GameState, display_names: dict[str, str]
+        self,
+        game_id: str,
+        state: GameState,
+        display_names: dict[str, str],
+        cosmetics_by_user: dict[str, dict[str, str]],
     ) -> None:
         dead: list[tuple[str, WebSocket]] = []
         for user_id, ws in list(self._conns.get(game_id, {}).items()):
@@ -62,12 +67,23 @@ class ConnectionManager:
                 payload = serialize_state(
                     state, viewer_id=user_id, display_names=display_names
                 ).model_dump()
+                _attach_cosmetics(payload, cosmetics_by_user)
                 await ws.send_json({"type": "state", "data": payload})
             except Exception as e:
                 logger.warning("WS send failed for %s: %s", user_id, e)
                 dead.append((user_id, ws))
         for user_id, ws in dead:
             self.disconnect(game_id, user_id, ws)
+
+
+def _attach_cosmetics(
+    payload: dict, cosmetics_by_user: dict[str, dict[str, str]]
+) -> None:
+    """serialize_state의 payload.players[i]에 cosmetics 키 합치기."""
+    for p in payload.get("players", []):
+        uid = p.get("player_id") or p.get("user_id")
+        if uid and uid in cosmetics_by_user:
+            p["cosmetics"] = cosmetics_by_user[uid]
 
 
 manager = ConnectionManager()
@@ -120,19 +136,34 @@ async def game_socket(
             await websocket.close(code=4401, reason="user not found")
             return
         display_names = await load_display_names(session, state)
+        player_uuids = [uuid.UUID(p.player_id) for p in state.players]
+        cosmetics_by_user_uuid = await cosmetics_service.get_loadouts_for_users(
+            session, player_uuids
+        )
+        cosmetics_by_user: dict[str, dict[str, str]] = {
+            str(k): v for k, v in cosmetics_by_user_uuid.items()
+        }
 
     await manager.connect(game_id, user_id_str, websocket)
 
     payload = serialize_state(
         state, viewer_id=user_id_str, display_names=display_names
     ).model_dump()
+    _attach_cosmetics(payload, cosmetics_by_user)
     await websocket.send_json({"type": "state", "data": payload})
 
     try:
         while True:
             msg = await websocket.receive_json()
             await _handle_action(
-                svc, sm, game_id, user_id_str, msg, websocket, display_names
+                svc,
+                sm,
+                game_id,
+                user_id_str,
+                msg,
+                websocket,
+                display_names,
+                cosmetics_by_user,
             )
     except WebSocketDisconnect:
         pass
@@ -148,6 +179,7 @@ async def _handle_action(
     msg: dict,
     sender: WebSocket,
     display_names: dict[str, str],
+    cosmetics_by_user: dict[str, dict[str, str]],
 ) -> None:
     action = msg.get("action")
     # 모든 액션은 본인 명의로만 전송 가능. payload.player_id를 강제 user_id로 덮어쓴다.
@@ -217,7 +249,7 @@ async def _handle_action(
         except Exception as e:
             logger.warning("append_action_event failed for %s: %s", game_id, e)
 
-    await manager.broadcast(game_id, state, display_names)
+    await manager.broadcast(game_id, state, display_names, cosmetics_by_user)
 
     if state.phase in (Phase.DONE, Phase.GAME_OVER):
         try:
@@ -235,7 +267,7 @@ async def _handle_action(
         except (GameNotFoundError, GameLockError, ValueError) as e:
             logger.warning("auto-advance failed for %s: %s", game_id, e)
             return
-        await manager.broadcast(game_id, advanced, display_names)
+        await manager.broadcast(game_id, advanced, display_names, cosmetics_by_user)
 
 
 async def _capture_hand(svc: GameService, game_id: str, user_id_str: str) -> list[dict]:

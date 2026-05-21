@@ -187,3 +187,43 @@ async def test_dev_login_reuses_existing_user(
     assert resp.status_code == 200
     body = resp.json()
     assert body["user"]["nickname"] == "bob"
+
+
+async def test_dev_login_grants_default_cosmetics(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """dev_login으로 신규 user 생성 시 inventory·loadout이 default로 채워져야 함."""
+    import uuid
+
+    from app.config import settings
+    from app.cosmetics import repository as cosmetics_repo
+    from app.cosmetics.models import Cosmetic
+
+    monkeypatch.setattr(settings, "dev_auth_enabled", True)
+
+    seed = [
+        ("card_back", "back.navy", "네이비", True),
+        ("card_back", "back.ocean", "오션", False),
+        ("card_face", "face.classic", "클래식", True),
+        ("card_face", "face.modern", "모던", False),
+        ("table_theme", "table.green", "그린", True),
+        ("table_theme", "table.walnut", "월넛", False),
+        ("title", "title.beginner", "초보자", True),
+        ("title", "title.fl_demon", "FL악마", False),
+    ]
+    for cat, code, name, is_default in seed:
+        db_session.add(
+            Cosmetic(category=cat, code=code, name=name, is_default=is_default)
+        )
+    await db_session.commit()
+
+    resp = await client.post("/api/auth/dev-login", json={"nickname": "newbie_x"})
+    assert resp.status_code == 200
+    user_id = uuid.UUID(resp.json()["user"]["id"])
+
+    inv = await cosmetics_repo.list_inventory_for_user(db_session, user_id)
+    loadout = await cosmetics_repo.get_loadout_for_user(db_session, user_id)
+    assert len(inv) == 8
+    assert set(loadout.keys()) == {"card_back", "card_face", "table_theme", "title"}

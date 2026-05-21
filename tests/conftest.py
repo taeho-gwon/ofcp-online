@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 from app.config import settings
 from app.core.db import Base, get_session
 from app.core.redis import get_redis
+from app.cosmetics import models as _cosmetics_models  # noqa: F401
 from app.main import app
 from app.records import models as _records_models  # noqa: F401
 from app.users import models as _users_models  # noqa: F401
@@ -58,6 +59,13 @@ async def _setup_db(test_db_url: str) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(test_db_url)
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
+        await conn.execute(text("DROP TYPE IF EXISTS cosmetic_category CASCADE"))
+        await conn.execute(
+            text(
+                "CREATE TYPE cosmetic_category AS ENUM "
+                "('card_back', 'card_face', 'table_theme', 'title')"
+            )
+        )
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield engine
@@ -69,7 +77,9 @@ async def db_engine(_setup_db: AsyncEngine) -> AsyncEngine:
     async with _setup_db.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE TABLE game_events, game_players, games, users "
+                "TRUNCATE TABLE "
+                "user_cosmetic_loadout, user_cosmetic_inventory, cosmetics, "
+                "game_events, game_players, games, users "
                 "RESTART IDENTITY CASCADE"
             )
         )
