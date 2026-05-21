@@ -1,7 +1,49 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CosmeticCategory } from "../../api/cosmetics";
+import { TitleBadge } from "../../cosmetics/components/TitleBadge";
+import { resolveCardBack } from "../../cosmetics/registry/cardBacks";
+import { resolveCardFace } from "../../cosmetics/registry/cardFaces";
+import { resolveTableTheme } from "../../cosmetics/registry/tableThemes";
+import { resolveTitle } from "../../cosmetics/registry/titles";
 import { useCosmeticsStore } from "../../store/cosmeticsStore";
 import { Button } from "../ui";
+
+function PreviewMini({
+  category,
+  code,
+}: {
+  category: CosmeticCategory;
+  code: string;
+}) {
+  if (category === "card_back") {
+    const v = resolveCardBack(code);
+    const Comp = v.Component;
+    return <Comp size="sm" />;
+  }
+  if (category === "card_face") {
+    const v = resolveCardFace(code);
+    return <v.Face card={{ rank: 14, suit: 0 }} size="sm" />;
+  }
+  if (category === "table_theme") {
+    const v = resolveTableTheme(code);
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          width: 32,
+          height: 22,
+          borderRadius: 4,
+          ...v.surfaceStyle,
+        }}
+      />
+    );
+  }
+  if (category === "title") {
+    const v = resolveTitle(code);
+    return <TitleBadge variant={v} />;
+  }
+  return null;
+}
 
 const CATEGORIES: { key: CosmeticCategory; label: string }[] = [
   { key: "card_back", label: "카드 뒷면" },
@@ -104,7 +146,16 @@ export function CosmeticsSection() {
                   size="sm"
                   onClick={() => setDraft((d) => ({ ...d, [key]: item.id }))}
                 >
-                  {item.name}
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <PreviewMini category={key} code={item.code} />
+                    <span>{item.name}</span>
+                  </span>
                 </Button>
               ))}
             </div>
