@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 from app.config import settings
 from app.core.db import Base, get_session
 from app.core.redis import get_redis
+from app.cosmetics import models as _cosmetics_models  # noqa: F401
 from app.main import app
 from app.records import models as _records_models  # noqa: F401
 from app.users import models as _users_models  # noqa: F401
@@ -69,7 +70,9 @@ async def db_engine(_setup_db: AsyncEngine) -> AsyncEngine:
     async with _setup_db.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE TABLE game_events, game_players, games, users "
+                "TRUNCATE TABLE "
+                "user_cosmetic_loadout, user_cosmetic_inventory, cosmetics, "
+                "game_events, game_players, games, users "
                 "RESTART IDENTITY CASCADE"
             )
         )
