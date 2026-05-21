@@ -59,7 +59,7 @@ async def _setup_db(test_db_url: str) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(test_db_url)
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
-        await conn.execute(text("DROP TYPE IF EXISTS cosmetic_category"))
+        await conn.execute(text("DROP TYPE IF EXISTS cosmetic_category CASCADE"))
         await conn.execute(
             text(
                 "CREATE TYPE cosmetic_category AS ENUM "
