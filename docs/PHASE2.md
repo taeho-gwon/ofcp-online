@@ -2,6 +2,18 @@
 
 > CLAUDE.md의 단계 전략에 따른 2단계 상세 계획. 1단계 → 2단계 전환 시 DB 전체 초기화.
 
+## 현 상태 (2026-05-21)
+
+본 문서는 **과거의 청사진**이며, 잔여 작업·진행 상태는 [`BACKLOG.md`](BACKLOG.md)를 본다.
+
+- **M1~M5, M7, M8, M9**: 완료. A·B·C·D·E·F sub-project가 모두 Done.
+- **M6 (랭킹)**: ❌ **스킵** — 2026-05-12 사용자 결정. 본 문서 아래의 `rankings/` 모듈, `Ranking.tsx`, `/api/rankings` 엔드포인트, "랭킹 페이지 진입 동선" 관련 기술은 **무효**.
+- **잔여**: G(공개 운영 안전장치), Ops(운영 준비), QA(E2E 검증) — `BACKLOG.md` 참조.
+
+2.5단계 코스메틱은 본 문서 범위 밖. [`superpowers/specs/2026-05-17-cosmetics-backend-design.md`](superpowers/specs/2026-05-17-cosmetics-backend-design.md) 참조.
+
+---
+
 ## 목표
 
 1단계 OFC MVP의 게임 로직·실시간 통신 검증 완료 → 공개 서비스로 전환하며 **회원·랭킹·기록** 도입.

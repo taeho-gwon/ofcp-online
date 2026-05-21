@@ -4,23 +4,26 @@
 > 설계 청사진: [PHASE2.md](PHASE2.md) — 도메인 트리·DB 스키마·재사용 자원.
 > 백로그 운영 규칙: [superpowers/specs/2026-05-17-phase2-backlog-design.md](superpowers/specs/2026-05-17-phase2-backlog-design.md).
 
-**2026-05-17 스캔 결과**: A~F 코어 구현은 사실상 완료된 상태였음. 본 백로그는 잔여 작업(G 마감 + 운영 준비 + E2E 검증 + 옵션 보강)으로 재구성됨.
+**2026-05-17 스캔 결과**: A~F 코어 구현은 사실상 완료된 상태였음.
+**2026-05-21 결정**: G·Ops·QA는 **스킵**하고 2.5단계(코스메틱)로 진입. 운영 공개 직전 시점에 재아이디에이션 후 별도 트랙으로 재개 검토.
 
 ## 진행 현황
 
-| Sub | 이름 | 의존 | 상태 | 잔여 |
+| Sub | 이름 | 의존 | 상태 | 비고 |
 |-----|------|------|------|------|
 | A | DB 인프라 | — | **Done** | — |
-| B | 인증·회원 | A | **Done** | google_client_id 운영값 주입 |
-| C | 로비·인증 가드 | B | **Done** | E2E 수동 검증 |
+| B | 인증·회원 | A | **Done** | google_client_id 운영값 주입은 Ops 트랙에서 처리 |
+| C | 로비·인증 가드 | B | **Done** | E2E 수동 검증은 QA 트랙에서 처리 |
 | D | 게임 기록 | C | **Done** | — |
 | E | 리플레이 | D | **Done** | (옵션) 재생 컨트롤 UI 보강 |
 | F | 연습 모드 | — | **Done** | (옵션) FantasyLand 라운드 지원 |
-| G | 공개 운영 안전장치 | — | **In Progress** | 신고 채널 구체화, 비공개 모드, 등급분류 검토 |
-| Ops | 운영 준비 | — | **Pending** | 도메인·DNS·HTTPS·env·로그·백업 |
-| QA | E2E 검증 | C·D·E | **Pending** | 로그인→게임→기록→리플레이 풀 시나리오 |
+| G | 공개 운영 안전장치 | — | **Skipped (2026-05-21)** | 운영 공개 직전 재개 |
+| Ops | 운영 준비 | — | **Skipped (2026-05-21)** | 운영 공개 직전 재개 |
+| QA | E2E 검증 | C·D·E | **Skipped (2026-05-21)** | 운영 공개 직전 재개 |
 
-오픈 라인: **G·Ops·QA 완료**.
+**2단계 닫힘**. 다음 트랙: **2.5단계 코스메틱** ([cosmetics-backend-design.md](superpowers/specs/2026-05-17-cosmetics-backend-design.md)).
+
+> 아래 G·Ops·QA 섹션은 스킵된 상태로 보존된다. 재개 시 그대로 활용한다.
 
 ---
 
@@ -143,7 +146,7 @@ games·game_players·game_events 테이블 + service·repository + ws 핸들러 
 
 ---
 
-## G. 공개 운영 안전장치 [In Progress]
+## G. 공개 운영 안전장치 [Skipped — 운영 공개 직전 재개]
 
 Footer·About 문구는 적용됨. 운영자 통제·신고 채널 구체화 잔여.
 
@@ -162,7 +165,7 @@ Footer·About 문구는 적용됨. 운영자 통제·신고 채널 구체화 잔
 
 ---
 
-## Ops. 운영 준비 [Pending]
+## Ops. 운영 준비 [Skipped — 운영 공개 직전 재개]
 
 코드 외 작업. 도메인·환경변수·로그·백업.
 
@@ -182,7 +185,7 @@ Footer·About 문구는 적용됨. 운영자 통제·신고 채널 구체화 잔
 
 ---
 
-## QA. E2E 검증 [Pending]
+## QA. E2E 검증 [Skipped — 운영 공개 직전 재개]
 
 오픈 전 수동 시나리오 검증.
 
@@ -202,4 +205,13 @@ Footer·About 문구는 적용됨. 운영자 통제·신고 채널 구체화 잔
 
 ## 2.5단계 예고
 
-코스메틱 (카드 이미지·게임 보드·아바타 유료) 도입 예정. 2단계 오픈 이후 별도 brainstorming 트랙으로 진행. 결제 인프라·등급분류 재검토·약관 수정 등이 별도 백로그(`docs/BACKLOG_PHASE25.md`)로 분리될 예정.
+코스메틱 (카드 face/back·게임 보드·score_effect — 아바타는 후속) 도입 예정. 2단계 오픈 이후 별도 brainstorming 트랙으로 진행.
+
+**작성된 spec**:
+- [`superpowers/specs/2026-05-17-cosmetics-backend-design.md`](superpowers/specs/2026-05-17-cosmetics-backend-design.md) — 백엔드 데이터 모델·API·신규 가입 자동 부여·상대 노출 payload. **1차 구현은 무료 자동 소유** (결제·잠금 UX는 후속 spec).
+
+**후속 검토 사항** (별도 `docs/BACKLOG_PHASE25.md`로 분리될 예정):
+- 결제 인프라·환불 정책
+- 게임물관리위원회 등급분류 재검토 (유료 코스메틱 발생 시점)
+- "비영리·교육 목적" Footer/About 문구 교체 — 결제 도입 시점
+- 약관 수정·소비자보호법 적용
