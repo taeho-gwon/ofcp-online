@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Card, GameState, PlayerState, Row, WsClientMsg } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
+import { TableSurface } from "../cosmetics/components/TableSurface";
+import { usePlayerCosmetics } from "../cosmetics/useResolved";
 import { isFoulBoard } from "../lib/handEval";
 import { displayName } from "../lib/displayName";
 import { getRequiredDiscard, getRequiredPlace } from "../lib/turnRequirements";
@@ -80,6 +82,8 @@ export function OfcTable({ session }: Props) {
     () => gameState?.players.find((p) => p.player_id === myPlayerId) ?? null,
     [gameState, myPlayerId],
   );
+
+  const { table: myTable } = usePlayerCosmetics(myPlayerId);
 
   const isFantasyPhase = gameState?.phase === "fantasy_turn";
   const myFlIncomplete = !!me && me.is_fantasy && !isBoardComplete(me);
@@ -293,6 +297,7 @@ export function OfcTable({ session }: Props) {
       )}
 
       <main className="flex-1 flex items-start justify-center">
+        <TableSurface theme={myTable}>
         <div
           className="grid gap-3"
           style={{
@@ -322,6 +327,7 @@ export function OfcTable({ session }: Props) {
             );
           })}
         </div>
+        </TableSurface>
       </main>
 
       {modalOpen && gameState.matchups !== null && (
