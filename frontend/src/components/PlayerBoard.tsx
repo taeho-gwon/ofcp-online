@@ -84,9 +84,8 @@ export function PlayerBoard({
   animOverlay = null,
 }: Props) {
   const ring = isCurrent ? "ring-2 ring-amber-400" : "ring-1 ring-slate-300";
-  const me = isMe ? "bg-emerald-50" : "bg-white";
   const isFoul = player.evaluation?.is_foul ?? false;
-  const { title } = usePlayerCosmetics(player.player_id);
+  const { title, table } = usePlayerCosmetics(player.player_id);
 
   const rowOverlay =
     animOverlay && ROWS.includes(animOverlay.position as Row)
@@ -95,7 +94,10 @@ export function PlayerBoard({
   const centerOverlay = animOverlay?.position === "center" ? animOverlay : null;
 
   return (
-    <div className={`relative rounded-lg ${ring} ${me} p-4 flex flex-col gap-3`}>
+    <div
+      className={`relative rounded-lg ${ring} p-4 flex flex-col gap-3`}
+      style={table.surfaceStyle}
+    >
       <div className="flex items-center justify-between text-sm">
         <span className="flex flex-col gap-0.5 truncate">
           <TitleBadge variant={title} />
