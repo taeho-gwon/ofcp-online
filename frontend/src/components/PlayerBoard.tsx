@@ -1,5 +1,7 @@
 import type { Card, PlayerState, Row } from "../api/types";
 import { ROW_CAPACITY } from "../api/types";
+import { TitleBadge } from "../cosmetics/components/TitleBadge";
+import { usePlayerCosmetics } from "../cosmetics/useResolved";
 import { CardBack, CardView, EmptySlot } from "./Card";
 
 const COUNT_KEY: Record<Row, "top_count" | "middle_count" | "bottom_count"> = {
@@ -84,6 +86,7 @@ export function PlayerBoard({
   const ring = isCurrent ? "ring-2 ring-amber-400" : "ring-1 ring-slate-300";
   const me = isMe ? "bg-emerald-50" : "bg-white";
   const isFoul = player.evaluation?.is_foul ?? false;
+  const { title } = usePlayerCosmetics(player.player_id);
 
   const rowOverlay =
     animOverlay && ROWS.includes(animOverlay.position as Row)
@@ -94,19 +97,22 @@ export function PlayerBoard({
   return (
     <div className={`relative rounded-lg ${ring} ${me} p-4 flex flex-col gap-3`}>
       <div className="flex items-center justify-between text-sm">
-        <span className="flex items-center gap-1.5 font-semibold truncate">
-          {isDealer && (
-            <span
-              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[10px] font-bold shadow-sm"
-              title="딜러"
-            >
-              D
-            </span>
-          )}
-          <span className="truncate">{label}</span>
-          {isMe && (
-            <span className="text-emerald-700 text-xs">(나)</span>
-          )}
+        <span className="flex flex-col gap-0.5 truncate">
+          <TitleBadge variant={title} />
+          <span className="flex items-center gap-1.5 font-semibold truncate">
+            {isDealer && (
+              <span
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[10px] font-bold shadow-sm"
+                title="딜러"
+              >
+                D
+              </span>
+            )}
+            <span className="truncate">{label}</span>
+            {isMe && (
+              <span className="text-emerald-700 text-xs">(나)</span>
+            )}
+          </span>
         </span>
         <div className="flex items-center gap-2 text-xs">
           {isFoul && (
