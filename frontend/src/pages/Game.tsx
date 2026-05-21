@@ -11,6 +11,7 @@ import { OfcTable, type OfcSession } from "../components/OfcTable";
 import { RulesModal } from "../components/RulesModal";
 import { Badge, Button, Modal } from "../components/ui";
 import { useAuthStore } from "../store/authStore";
+import { useCosmeticsStore } from "../store/cosmeticsStore";
 import { useGameStore } from "../store/gameStore";
 
 const PAGE_MAX_WIDTH = 1200;
@@ -46,6 +47,12 @@ export function Game() {
   const setConnected = useGameStore((s) => s.setConnected);
   const setError = useGameStore((s) => s.setError);
   const reset = useGameStore((s) => s.reset);
+
+  const cosmeticsLoaded = useCosmeticsStore((s) => s.loaded);
+  const hydrateCosmetics = useCosmeticsStore((s) => s.hydrate);
+  useEffect(() => {
+    if (!cosmeticsLoaded) hydrateCosmetics().catch(() => {});
+  }, [cosmeticsLoaded, hydrateCosmetics]);
 
   const socketRef = useRef<GameSocket | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);

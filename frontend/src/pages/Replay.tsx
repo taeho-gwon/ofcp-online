@@ -211,6 +211,7 @@ export function Replay() {
                   return (
                     <ReplayBoard
                       key={uid}
+                      playerId={uid}
                       nickname={nicknameOf(uid)}
                       top={b.top}
                       middle={b.middle}

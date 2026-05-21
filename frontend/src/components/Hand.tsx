@@ -31,6 +31,7 @@ interface Props {
   selectedIdx: number | null;
   onPlace: (idx: number) => void;
   onUnplace: (idx: number) => void;
+  myPlayerId: string;
 }
 
 export function Hand({
@@ -40,6 +41,7 @@ export function Hand({
   selectedIdx,
   onPlace,
   onUnplace,
+  myPlayerId,
 }: Props) {
   const [mode, setMode] = useState<SortMode>(loadSortMode);
 
@@ -87,6 +89,7 @@ export function Hand({
               faded={isPlaced}
               selected={isSelected}
               onClick={handleClick}
+              playerId={myPlayerId}
             />
           );
         })}

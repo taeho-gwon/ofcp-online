@@ -1,7 +1,25 @@
 import type { Matchup, PlayerState, Row } from "../api/types";
+import { TitleBadge } from "../cosmetics/components/TitleBadge";
+import { usePlayerCosmetics } from "../cosmetics/useResolved";
 import { displayName } from "../lib/displayName";
 
 type PlayersMeta = Record<string, string> | undefined;
+
+function PlayerName({
+  playerId,
+  playersMeta,
+}: {
+  playerId: string;
+  playersMeta: PlayersMeta;
+}) {
+  const { title } = usePlayerCosmetics(playerId);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <TitleBadge variant={title} />
+      <span>{displayName(playerId, playersMeta)}</span>
+    </span>
+  );
+}
 
 interface Props {
   players: PlayerState[];
@@ -54,7 +72,7 @@ function PlayerCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-semibold">
-            {displayName(player.player_id, playersMeta)}
+            <PlayerName playerId={player.player_id} playersMeta={playersMeta} />
           </span>
           {isMe && <span className="text-xs text-emerald-700">(나)</span>}
           {ev?.is_foul && (
@@ -166,17 +184,17 @@ function MatchupRow({
           <>
             <span className="text-slate-400 mr-1">vs</span>
             <span className="truncate">
-              {displayName(oppId, playersMeta)}
+              <PlayerName playerId={oppId} playersMeta={playersMeta} />
             </span>
           </>
         ) : (
           <>
             <span className="truncate">
-              {displayName(meId, playersMeta)}
+              <PlayerName playerId={meId} playersMeta={playersMeta} />
             </span>
             <span className="text-slate-400 mx-1">vs</span>
             <span className="truncate">
-              {displayName(oppId, playersMeta)}
+              <PlayerName playerId={oppId} playersMeta={playersMeta} />
             </span>
           </>
         )}
@@ -224,7 +242,7 @@ function FinalStandings({
               <span className="flex items-center gap-2">
                 <span className="font-mono text-amber-700 w-6">#{i + 1}</span>
                 <span className={isMe ? "font-semibold text-emerald-700" : ""}>
-                  {displayName(p.player_id, playersMeta)}
+                  <PlayerName playerId={p.player_id} playersMeta={playersMeta} />
                   {isMe && (
                     <span className="ml-1 text-xs text-emerald-700">(나)</span>
                   )}

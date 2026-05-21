@@ -54,7 +54,7 @@ function HeroCardFan() {
             transformOrigin: "center bottom",
           }}
         >
-          <CardView card={h.card} size="md" />
+          <CardView card={h.card} size="md" playerId="" />
         </div>
       ))}
     </div>

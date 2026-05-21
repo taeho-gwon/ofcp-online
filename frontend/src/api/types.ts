@@ -59,6 +59,13 @@ export interface Matchup {
   total_a: number;
 }
 
+export interface PlayerCosmetics {
+  card_back?: string;
+  card_face?: string;
+  table_theme?: string;
+  title?: string;
+}
+
 export interface PlayerState {
   player_id: string;
   board: Board;
@@ -69,6 +76,7 @@ export interface PlayerState {
   next_fantasy_cards: number | null;
   evaluation?: BoardEvaluation | null;
   last_round_delta?: number | null;
+  cosmetics?: PlayerCosmetics;
 }
 
 export interface GameState {

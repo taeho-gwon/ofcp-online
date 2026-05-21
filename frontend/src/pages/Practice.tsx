@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   BoardEvaluation,
@@ -19,6 +19,7 @@ import {
   royaltyTop,
 } from "../lib/royalty";
 import { useAuthStore } from "../store/authStore";
+import { useCosmeticsStore } from "../store/cosmeticsStore";
 
 const PAGE_MAX_WIDTH = 1200;
 
@@ -227,6 +228,12 @@ export function Practice() {
   const authed = useAuthStore((a) => !!a.accessToken);
   const [s, setS] = useState<PracticeState>(() => startNewRound(0));
 
+  const cosmeticsLoaded = useCosmeticsStore((c) => c.loaded);
+  const hydrateCosmetics = useCosmeticsStore((c) => c.hydrate);
+  useEffect(() => {
+    if (!cosmeticsLoaded) hydrateCosmetics().catch(() => {});
+  }, [cosmeticsLoaded, hydrateCosmetics]);
+
   const gameState = useMemo(() => buildGameState(s), [s]);
 
   const session: OfcSession = useMemo(
@@ -307,6 +314,7 @@ export function Practice() {
                   card={c}
                   size="sm"
                   faded
+                  playerId=""
                 />
               ))}
             </div>
