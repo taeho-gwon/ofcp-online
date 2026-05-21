@@ -11,7 +11,7 @@ export function TableSurface({
   return (
     <div
       className={theme.surfaceClass}
-      style={{ borderRadius: 12, padding: 12, ...theme.surfaceStyle }}
+      style={{ borderRadius: 16, padding: 32, ...theme.surfaceStyle }}
     >
       {children}
     </div>
