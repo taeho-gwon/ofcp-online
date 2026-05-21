@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CARD_BACKS, resolveCardBack } from "../cardBacks";
 import { CARD_FACES, resolveCardFace } from "../cardFaces";
+import { TABLE_THEMES, resolveTableTheme } from "../tableThemes";
+import { TITLES, resolveTitle } from "../titles";
 
 describe("resolveCardBack", () => {
   it("returns variant for known code", () => {
@@ -34,6 +36,42 @@ describe("resolveCardFace", () => {
     expect(Object.keys(CARD_FACES).sort()).toEqual([
       "face.classic",
       "face.modern",
+    ]);
+  });
+});
+
+describe("resolveTableTheme", () => {
+  it("returns green for known code", () => {
+    expect(resolveTableTheme("table.green").code).toBe("table.green");
+  });
+  it("returns walnut for known code", () => {
+    expect(resolveTableTheme("table.walnut").code).toBe("table.walnut");
+  });
+  it("falls back to default", () => {
+    expect(resolveTableTheme("table.??").code).toBe("table.green");
+  });
+  it("TABLE_THEMES contains both seeds", () => {
+    expect(Object.keys(TABLE_THEMES).sort()).toEqual([
+      "table.green",
+      "table.walnut",
+    ]);
+  });
+});
+
+describe("resolveTitle", () => {
+  it("returns beginner for known code", () => {
+    expect(resolveTitle("title.beginner").code).toBe("title.beginner");
+  });
+  it("returns fl_demon for known code", () => {
+    expect(resolveTitle("title.fl_demon").code).toBe("title.fl_demon");
+  });
+  it("falls back to default", () => {
+    expect(resolveTitle("title.unknown").code).toBe("title.beginner");
+  });
+  it("TITLES contains both seeds", () => {
+    expect(Object.keys(TITLES).sort()).toEqual([
+      "title.beginner",
+      "title.fl_demon",
     ]);
   });
 });
