@@ -205,13 +205,30 @@ Footer·About 문구는 적용됨. 운영자 통제·신고 채널 구체화 잔
 
 ## 2.5단계 예고
 
-코스메틱 (카드 face/back·게임 보드·score_effect — 아바타는 후속) 도입 예정. 2단계 오픈 이후 별도 brainstorming 트랙으로 진행.
+코스메틱 시스템 도입. **雀魂 스타일의 풀 코스메틱 + 재화 + 가챠 + 시즌패스** 비전으로 2026-05-21 확장 결정.
 
-**작성된 spec**:
-- [`superpowers/specs/2026-05-17-cosmetics-backend-design.md`](superpowers/specs/2026-05-17-cosmetics-backend-design.md) — 백엔드 데이터 모델·API·신규 가입 자동 부여·상대 노출 payload. **1차 구현은 무료 자동 소유** (결제·잠금 UX는 후속 spec).
+**현재 단계**: brainstorming. 기존 spec(`2026-05-17-cosmetics-backend-design.md`, 4 도메인 자동소유)은 폐기.
+
+**카테고리 후보 (13종)**:
+캐릭터, 캐릭터 스킨, 보이스팩, 카드 백, 카드 프론트, 테이블/보드 테마, 이펙트 팩, 이모트/스티커, 칭호, 프로필 프레임/배경, 시즌 뱃지, BGM/사운드 팩, 승리 포즈.
+
+**핵심 백엔드 구조 후보**:
+- 공통 `Item` 모델 (`category` ENUM + JSONB `metadata`) + `UserInventory` + `UserLoadout` (slot 기반)
+- 재화 2종: 젬(유료) / 코인(무료) + 트랜잭션 로그
+- `GameEvent` 발행 시스템 (HAND_START·FANTASYLAND_ENTRY·ROYALTY_TRIGGERED·SCOOP·FOUL·...) → 클라가 로드아웃으로 연출 매핑 (fallback 체인)
+- 가챠: UserGachaState + 천장(Pity) + 확률 공시 로그 (한국 법규)
+- 시즌/한정 플래그 (`release_season_id`, 영구/한정)
+
+**구현 우선순위 (후보)**:
+1. Item + UserInventory + UserLoadout 골격 (자산 없이)
+2. GameEvent 발행 시스템
+3. 재화 2종 + 트랜잭션 로그
+4. 상점/가챠 API (더미 자산으로)
+5. 시즌/패스 시스템
 
 **후속 검토 사항** (별도 `docs/BACKLOG_PHASE25.md`로 분리될 예정):
 - 결제 인프라·환불 정책
 - 게임물관리위원회 등급분류 재검토 (유료 코스메틱 발생 시점)
+- 한국 확률형 아이템 표시 의무 (게임산업법 개정안)
 - "비영리·교육 목적" Footer/About 문구 교체 — 결제 도입 시점
 - 약관 수정·소비자보호법 적용

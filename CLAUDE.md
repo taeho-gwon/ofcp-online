@@ -17,7 +17,7 @@ React + Vite + TypeScript 프론트엔드, FastAPI + Python 3.13 백엔드, WebS
 |------|------|----|----|
 | 1 | OFC MVP — 게임 로직·실시간 통신 검증 | Redis만 (게임 상태) | Done |
 | 2 | OFC Rich — 회원·기록·연습 (G·Ops·QA 스킵) | PostgreSQL 도입 | Closed (코어 Done, 운영 안전장치 트랙은 별도) |
-| 2.5 | 코스메틱 — 카드 face/back·board·score_effect (1차 무료 자동소유, 결제는 후속) | cosmetics 3 테이블 추가 | **In Progress (plan 작성 단계)** |
+| 2.5 | 코스메틱 — 雀魂 스타일 풀 시스템 (캐릭터·스킨·카드·테이블·이펙트·이모트·칭호·시즌패스·재화·가챠) | 신규 다수 (TBD) | **In Progress (brainstorming 단계)** |
 | 3 | 하트·스페이드 추가 | 게임별 이벤트 스키마 확장 | 미진입 |
 | 4 | 티츄 — 실시간 경합, XState·MSA 전환 검토 | - | 미진입 |
 
@@ -29,7 +29,7 @@ React + Vite + TypeScript 프론트엔드, FastAPI + Python 3.13 백엔드, WebS
 
 ### 다음 작업 진입 경로
 
-2.5단계 코스메틱 **plan 작성** (`superpowers:writing-plans`) → TDD 구현 → 마이그레이션 → 프론트 마이페이지 연동. spec은 [`docs/superpowers/specs/2026-05-17-cosmetics-backend-design.md`](docs/superpowers/specs/2026-05-17-cosmetics-backend-design.md).
+2.5단계 코스메틱 **brainstorming** (`superpowers:brainstorming`) → spec → plan → TDD. 2026-05-21 기존 spec(4 도메인 자동소유) 폐기. 새 비전은 雀魂 스타일 풀 시스템(공통 Item·Inventory·Loadout + 재화 2종 + 가챠 + 시즌패스 + GameEvent 트리거).
 
 ---
 
