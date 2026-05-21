@@ -64,3 +64,23 @@ async def update_loadout(
 
     await repo.upsert_loadout(session, user_id=user_id, items=requested)
     return LoadoutOut(**requested)
+
+
+async def get_loadouts_for_users(
+    session: AsyncSession,
+    user_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, dict[str, str]]:
+    """게임 시작 시 N+1 없이 user별 loadout(code 문자열)을 가져온다.
+
+    누락된 (user, category)는 카테고리별 default cosmetic의 code로 fallback.
+    """
+    if not user_ids:
+        return {}
+
+    rows = await repo.get_loadouts_with_codes(session, user_ids)
+    defaults = await repo.get_default_codes_by_category(session)
+
+    result: dict[uuid.UUID, dict[str, str]] = {uid: dict(defaults) for uid in user_ids}
+    for uid, cat, code in rows:
+        result[uid][cat] = code
+    return result
